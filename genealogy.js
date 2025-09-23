@@ -133,6 +133,7 @@ function initSVG() {
 }
 
 // Build tree data structure
+// Build tree data structure
 function buildTreeData() {
     nodes = [];
     links = [];
@@ -156,27 +157,54 @@ function buildTreeData() {
         });
     });
 
-    // Create links from parent relationships
+    // Create a Set of valid node IDs for quick lookup
+    const validNodeIds = new Set(nodes.map(node => node.id));
+
+    // Create links from parent relationships - WITH VALIDATION
     databasePeppers.forEach(pepper => {
         if (pepper.isHybrid && pepper.motherPlant && pepper.fatherPlant) {
-            // Link from mother to child
-            links.push({
-                source: pepper.motherPlant,
-                target: pepper.id,
-                type: 'mother'
-            });
+            // Check if both mother and father nodes exist
+            const motherExists = validNodeIds.has(parseInt(pepper.motherPlant));
+            const fatherExists = validNodeIds.has(parseInt(pepper.fatherPlant));
+            const childExists = validNodeIds.has(pepper.id);
+
+            if (motherExists && childExists) {
+                // Link from mother to child
+                links.push({
+                    source: parseInt(pepper.motherPlant),
+                    target: pepper.id,
+                    type: 'mother'
+                });
+            } else {
+                console.warn(`⚠️ Link madre non valido: madre=${pepper.motherPlant}, figlio=${pepper.id}`, {
+                    motherExists, childExists
+                });
+            }
             
-            // Link from father to child
-            links.push({
-                source: pepper.fatherPlant,
-                target: pepper.id,
-                type: 'father'
-            });
+            if (fatherExists && childExists) {
+                // Link from father to child
+                links.push({
+                    source: parseInt(pepper.fatherPlant),
+                    target: pepper.id,
+                    type: 'father'
+                });
+            } else {
+                console.warn(`⚠️ Link padre non valido: padre=${pepper.fatherPlant}, figlio=${pepper.id}`, {
+                    fatherExists, childExists
+                });
+            }
         }
     });
 
-    console.log('🌳 Tree data built:', { nodes: nodes.length, links: links.length });
+    console.log('🌳 Tree data built:', { 
+        nodes: nodes.length, 
+        links: links.length,
+        nodeIds: nodes.map(n => n.id),
+        linkSources: links.map(l => l.source),
+        linkTargets: links.map(l => l.target)
+    });
 }
+
 
 // Calculate generation level
 function calculateGeneration(pepper) {
@@ -213,8 +241,9 @@ function onFilterChange() {
 }
 
 // Apply filters to nodes and links
+// Apply filters to nodes and links
 function applyFilters() {
-    // Filter nodes
+    // Start with all nodes
     let filteredNodes = [...nodes];
     
     if (currentFilters.species !== 'all') {
@@ -234,17 +263,36 @@ function applyFilters() {
         });
     }
     
-    // Filter links to only show connections between visible nodes
+    // Create set of visible node IDs
     const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
-    const filteredLinks = links.filter(link => 
-        visibleNodeIds.has(link.source.id || link.source) && 
-        visibleNodeIds.has(link.target.id || link.target)
-    );
+    
+    // Filter links to only show connections between visible nodes
+    // AND validate that both source and target exist
+    const filteredLinks = links.filter(link => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        
+        const sourceVisible = visibleNodeIds.has(sourceId);
+        const targetVisible = visibleNodeIds.has(targetId);
+        
+        if (!sourceVisible || !targetVisible) {
+            console.log(`🔍 Link filtrato: ${sourceId} -> ${targetId} (source visible: ${sourceVisible}, target visible: ${targetVisible})`);
+        }
+        
+        return sourceVisible && targetVisible;
+    });
     
     // Update simulation data
     nodes = filteredNodes;
     links = filteredLinks;
+    
+    console.log('🔍 Filtri applicati:', {
+        nodes: nodes.length,
+        links: links.length,
+        visibleIds: Array.from(visibleNodeIds)
+    });
 }
+
 
 // Render the tree
 // Render the tree
