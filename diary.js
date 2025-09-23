@@ -566,15 +566,40 @@ async function saveEntry(e) {
 }
 
 
-// Convert file to base64
-function fileToBase64(file) {
+// Modifica la funzione fileToBase64 per comprimere
+function fileToBase64(file, quality = 0.7) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Ridimensiona se troppo grande
+                let { width, height } = img;
+                const maxWidth = 800;
+                
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Converti con compressione
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
         reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
     });
 }
+
 
 // Switch view
 function switchView(view) {
