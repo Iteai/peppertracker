@@ -454,31 +454,54 @@ function closeEntryModal() {
 }
 
 // Save entry
+// Save entry - VERSIONE DEBUG
 async function saveEntry(e) {
     e.preventDefault();
     
+    console.log('🚀 Saving entry...');
+    
     const formData = new FormData(entryForm);
     const entryId = entryForm.getAttribute('data-id');
+    
+    console.log('📁 Files from input:', entryPhotos.files);
+    console.log('📁 Files count:', entryPhotos.files.length);
     
     // Convert photos to base64
     const photos = [];
     const files = Array.from(entryPhotos.files);
     
-    for (const file of files) {
+    console.log('🔄 Processing', files.length, 'files...');
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log('📷 Processing file:', file.name, file.size, 'bytes');
+        
         try {
             const base64 = await fileToBase64(file);
-            photos.push({
+            console.log('✅ Base64 conversion successful, length:', base64.length);
+            
+            const photoObj = {
                 id: Date.now() + Math.random(),
                 filename: file.name,
                 size: file.size,
                 type: file.type,
                 data: base64,
                 uploadDate: new Date().toISOString()
+            };
+            
+            photos.push(photoObj);
+            console.log('📷 Photo object created:', {
+                filename: photoObj.filename,
+                size: photoObj.size,
+                dataLength: photoObj.data.length
             });
+            
         } catch (error) {
-            console.error('Error converting file to base64:', error);
+            console.error('❌ Error converting file to base64:', error);
         }
     }
+    
+    console.log('📷 Total photos processed:', photos.length);
     
     const entryData = {
         id: entryId ? parseInt(entryId) : Date.now(),
@@ -489,12 +512,22 @@ async function saveEntry(e) {
         title: formData.get('entryTitle'),
         content: formData.get('entryContent'),
         tags: [...selectedTags],
-        photos: photos,
+        photos: photos, // ⬅️ ASSICURATI CHE QUESTO ARRAY NON SIA VUOTO
         createdAt: entryId ? 
             diaryEntries.find(e => e.id == entryId)?.createdAt || new Date().toISOString() :
             new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
+    
+    console.log('📝 Entry data to save:', {
+        title: entryData.title,
+        photosCount: entryData.photos.length,
+        photosData: entryData.photos.map(p => ({
+            filename: p.filename,
+            size: p.size,
+            hasData: !!p.data
+        }))
+    });
     
     if (entryId) {
         // Update existing entry
@@ -502,6 +535,7 @@ async function saveEntry(e) {
         if (index !== -1) {
             // Keep existing photos if no new ones uploaded
             if (photos.length === 0) {
+                console.log('⚠️ No new photos, keeping existing ones');
                 entryData.photos = diaryEntries[index].photos || [];
             }
             diaryEntries[index] = entryData;
@@ -510,6 +544,11 @@ async function saveEntry(e) {
         // Add new entry
         diaryEntries.unshift(entryData);
     }
+    
+    console.log('💾 Final diary entries:', diaryEntries.map(e => ({
+        title: e.title,
+        photosCount: e.photos ? e.photos.length : 0
+    })));
     
     try {
         await dbSync.saveData({
@@ -530,6 +569,7 @@ async function saveEntry(e) {
         alert('Errore durante il salvataggio. Riprova.');
     }
 }
+
 
 // Convert file to base64
 function fileToBase64(file) {
