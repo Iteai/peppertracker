@@ -240,11 +240,32 @@ function onFilterChange() {
     renderTree();
 }
 
-// Apply filters to nodes and links
-// Apply filters to nodes and links
+// Apply filters to nodes and links - SENZA MUTARE GLI ARRAY ORIGINALI
 function applyFilters() {
-    // Start with all nodes
-    let filteredNodes = [...nodes];
+    // Parti dai dati originali SEMPRE (non da nodes filtrati)
+    const originalNodes = [];
+    databasePeppers.forEach(pepper => {
+        const generation = calculateGeneration(pepper);
+        originalNodes.push({
+            id: pepper.id,
+            name: pepper.name,
+            species: pepper.species,
+            isHybrid: pepper.isHybrid,
+            motherPlant: pepper.motherPlant,
+            fatherPlant: pepper.fatherPlant,
+            motherPlantName: pepper.motherPlantName,
+            fatherPlantName: pepper.fatherPlantName,
+            generation: generation,
+            color: getNodeColor(generation, pepper.isHybrid),
+            dateAdded: pepper.dateAdded,
+            // Mantieni le posizioni se esistono
+            x: nodes.find(n => n.id === pepper.id)?.x,
+            y: nodes.find(n => n.id === pepper.id)?.y
+        });
+    });
+
+    // Applica filtri su copia dei dati originali
+    let filteredNodes = [...originalNodes];
     
     if (currentFilters.species !== 'all') {
         filteredNodes = filteredNodes.filter(node => 
@@ -266,35 +287,51 @@ function applyFilters() {
     // Create set of visible node IDs
     const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
     
-    // Filter links to only show connections between visible nodes
-    // AND validate that both source and target exist
-    const filteredLinks = links.filter(link => {
-        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-        
-        const sourceVisible = visibleNodeIds.has(sourceId);
-        const targetVisible = visibleNodeIds.has(targetId);
-        
-        if (!sourceVisible || !targetVisible) {
-            console.log(`🔍 Link filtrato: ${sourceId} -> ${targetId} (source visible: ${sourceVisible}, target visible: ${targetVisible})`);
+    // Ricostruisci i link dai dati originali
+    const originalLinks = [];
+    databasePeppers.forEach(pepper => {
+        if (pepper.isHybrid && pepper.motherPlant && pepper.fatherPlant) {
+            const motherExists = visibleNodeIds.has(parseInt(pepper.motherPlant));
+            const fatherExists = visibleNodeIds.has(parseInt(pepper.fatherPlant));
+            const childExists = visibleNodeIds.has(pepper.id);
+
+            if (motherExists && childExists) {
+                originalLinks.push({
+                    source: parseInt(pepper.motherPlant),
+                    target: pepper.id,
+                    type: 'mother'
+                });
+            }
+            
+            if (fatherExists && childExists) {
+                originalLinks.push({
+                    source: parseInt(pepper.fatherPlant),
+                    target: pepper.id,
+                    type: 'father'
+                });
+            }
         }
-        
+    });
+    
+    // Filtra link solo tra nodi visibili
+    const filteredLinks = originalLinks.filter(link => {
+        const sourceVisible = visibleNodeIds.has(link.source);
+        const targetVisible = visibleNodeIds.has(link.target);
         return sourceVisible && targetVisible;
     });
     
-    // Update simulation data
+    // Aggiorna gli array globali
     nodes = filteredNodes;
     links = filteredLinks;
     
     console.log('🔍 Filtri applicati:', {
-        nodes: nodes.length,
-        links: links.length,
+        totalPeppers: databasePeppers.length,
+        filteredNodes: nodes.length,
+        filteredLinks: links.length,
         visibleIds: Array.from(visibleNodeIds)
     });
 }
 
-
-// Render the tree
 // Render the tree
 function renderTree() {
     // Clear ALL previous content first
