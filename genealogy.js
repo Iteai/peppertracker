@@ -434,47 +434,66 @@ function renderTree() {
     }, 1000);
 }
 
-// Drag functions - VERSIONE FUNZIONANTE
+// Drag functions - CON SALVATAGGIO PERMANENTE
 function dragstarted(event, d) {
-    // Riavvia la simulazione con meno intensità
-    if (!event.active) simulation.alphaTarget(0.05).restart();
+    // Ferma completamente la simulazione
+    simulation.stop();
+    d.isDragging = true;
     
-    // Fissa il nodo trascinato alla posizione corrente
-    d.fx = d.x;
-    d.fy = d.y;
-    
-    // Congela tutti gli ALTRI nodi nelle loro posizioni
-    nodes.forEach(node => {
-        if (node !== d) {
-            node.fx = node.x;
-            node.fy = node.y;
-            node.vx = node.vy = 0;
-        }
-    });
+    // Salva la posizione di partenza per debug
+    d.startX = d.x;
+    d.startY = d.y;
 }
 
 function dragged(event, d) {
-    // Aggiorna solo la posizione del nodo trascinato
-    d.fx = event.x;
-    d.fy = event.y;
+    // Aggiorna direttamente e PERMANENTEMENTE le coordinate del nodo
+    d.x = event.x;
+    d.y = event.y;
+    
+    // Aggiorna immediatamente la visualizzazione
+    updatePositions();
 }
 
 function dragended(event, d) {
-    // Ferma la simulazione
-    if (!event.active) simulation.alphaTarget(0);
+    d.isDragging = false;
     
-    // Rilascia il nodo trascinato (permetti movimento libero)
-    d.fx = null;
-    d.fy = null;
+    // IMPORTANTE: Salva definitivamente la nuova posizione
+    d.x = event.x;
+    d.y = event.y;
     
-    // Mantieni tutti gli altri nodi fissi
-    nodes.forEach(node => {
-        if (node !== d) {
-            node.fx = node.x;
-            node.fy = node.y;
-        }
-    });
+    // Rimuovi eventuali vincoli di posizione fissa
+    delete d.fx;
+    delete d.fy;
+    
+    console.log(`✅ Nodo ${d.name} spostato a: (${Math.round(d.x)}, ${Math.round(d.y)})`);
 }
+
+// Funzione per aggiornare solo le posizioni visuali - MIGLIORATA
+function updatePositions() {
+    // Aggiorna i links con controllo su source/target
+    g.selectAll('.link')
+        .attr('x1', d => {
+            const source = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source);
+            return source ? source.x : 0;
+        })
+        .attr('y1', d => {
+            const source = typeof d.source === 'object' ? d.source : nodes.find(n => n.id === d.source);
+            return source ? source.y : 0;
+        })
+        .attr('x2', d => {
+            const target = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target);
+            return target ? target.x : 0;
+        })
+        .attr('y2', d => {
+            const target = typeof d.target === 'object' ? d.target : nodes.find(n => n.id === d.target);
+            return target ? target.y : 0;
+        });
+
+    // Aggiorna i nodi
+    g.selectAll('.node')
+        .attr('transform', d => `translate(${d.x},${d.y})`);
+}
+
 
 // Show info panel
 function showInfoPanel(nodeData) {
