@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tracker Avanzato - Pepper Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <span class="close-btn" id="closeBtn">&times;</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="genealogy.html" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="#" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="#" id="galleryLink"><i class="fas fa-images"></i> Galleria</a></li>
+            <li><a href="tracker.html" id="trackerLink"><i class="fas fa-chart-line"></i> Tracker</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay for closing sidebar -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">📊 Tracker Avanzato</h1>
+        
+        <!-- Plant Selection & Controls -->
+        <div class="tracker-header">
+            <div class="plant-selector">
+                <label for="selectedPlant">Seleziona Pianta:</label>
+                <select id="selectedPlant" class="plant-select">
+                    <option value="">Scegli una pianta...</option>
+                </select>
+                <button id="addEntryBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-plus"></i> Nuova Entry
+                </button>
+            </div>
+            
+            <div class="tracker-controls">
+                <select id="metricType" class="control-select">
+                    <option value="height">Altezza (cm)</option>
+                    <option value="light">Luce (%)</option>
+                    <option value="fertilizer">Fertilizzante (ml/L)</option>
+                    <option value="stage">Stato Pianta</option>
+                </select>
+                
+                <select id="timeRange" class="control-select">
+                    <option value="all">Tutto il Periodo</option>
+                    <option value="month">Ultimo Mese</option>
+                    <option value="week">Ultima Settimana</option>
+                </select>
+                
+                <button id="compareBtn" class="btn btn-secondary">
+                    <i class="fas fa-chart-line"></i> Confronta
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Stats Cards -->
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-icon">🌱</div>
+                <div class="stat-content">
+                    <span class="stat-label">Altezza Attuale</span>
+                    <span class="stat-value" id="currentHeight">-</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-content">
+                    <span class="stat-label">Crescita Media</span>
+                    <span class="stat-value" id="avgGrowth">-</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-content">
+                    <span class="stat-label">Giorni Tracciati</span>
+                    <span class="stat-value" id="dayTracked">-</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <span class="stat-label">Stato Attuale</span>
+                    <span class="stat-value" id="currentStage">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chart Area -->
+        <div class="tracker-content">
+            <div class="plant-chart-section">
+                <div class="chart-header">
+                    <h3 id="chartTitle">Seleziona una pianta per vedere i grafici</h3>
+                    <div class="chart-stats">
+                        <span id="totalEntries">0 entry</span>
+                        <span id="dateRange">-</span>
+                        <span id="growthRate">-</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="plantProgressChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Entry Timeline -->
+            <div class="timeline-section">
+                <div class="timeline-header">
+                    <h3>📈 Timeline Entry</h3>
+                    <button id="refreshTimelineBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sync-alt"></i> Aggiorna
+                    </button>
+                </div>
+                <div id="entriesTimeline" class="timeline-container">
+                    <div class="no-data">Nessuna entry trovata</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Modal -->
+    <div id="entryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="entryModalTitle">Nuova Entry</h2>
+                <span class="close" id="closeEntryModal">&times;</span>
+            </div>
+            <form id="entryForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entryDate">Data:</label>
+                        <input type="date" id="entryDate" name="entryDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="entryStage">Stato:</label>
+                        <select id="entryStage" name="entryStage" required>
+                            <option value="semina">Semina</option>
+                            <option value="germinazione">Germinazione</option>
+                            <option value="crescita">Crescita</option>
+                            <option value="fioritura">Fioritura</option>
+                            <option value="fruttificazione">Fruttificazione</option>
+                            <option value="raccolta">Raccolta</option>
+                            <option value="raccoltasemi">Raccolta Semi</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entryHeight">Altezza (cm):</label>
+                        <input type="number" id="entryHeight" name="entryHeight" min="0" step="0.1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="entryLight">Luce (%):</label>
+                        <input type="number" id="entryLight" name="entryLight" min="0" max="100">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryFertilizer">Fertilizzante (ml/L):</label>
+                    <input type="number" id="entryFertilizer" name="entryFertilizer" min="0" step="0.1">
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryNotes">Note:</label>
+                    <textarea id="entryNotes" name="entryNotes" rows="3" placeholder="Osservazioni, cambiamenti, problemi..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Salva Entry</button>
+                    <button type="button" id="cancelEntryBtn" class="btn btn-secondary">Annulla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Compare Modal -->
+    <div id="compareModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Confronto Piante</h2>
+                <span class="close" id="closeCompareModal">&times;</span>
+            </div>
+            <div class="compare-content">
+                <div class="plant-selection">
+                    <div class="compare-plant">
+                        <label>Pianta 1:</label>
+                        <select id="comparePlant1" class="plant-select">
+                            <option value="">Seleziona...</option>
+                        </select>
+                    </div>
+                    <div class="compare-plant">
+                        <label>Pianta 2:</label>
+                        <select id="comparePlant2" class="plant-select">
+                            <option value="">Seleziona...</option>
+                        </select>
+                    </div>
+                    <button id="generateCompare" class="btn btn-primary">Confronta</button>
+                </div>
+                <div class="compare-chart-container">
+                    <canvas id="compareChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="sync.js"></script>
+    <script src="tracker.js"></script>
+</body>
+</html>
