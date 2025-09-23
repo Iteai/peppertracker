@@ -1,15 +1,14 @@
 // Diary variables
 let diaryEntries = [];
 let peppers = [];
-let quickNotes = ''; // Block notes sincronizzato
+let quickNotes = '';
 let dbSync;
 let selectedTags = [];
+let selectedFiles = []; // Files selezionati
+let photoDataUrls = []; // Photos convertite in Base64
 let currentView = 'timeline';
 let currentPhotoIndex = 0;
 let currentPhotoEntry = null;
-let selectedFiles = []; 
-let photoDataUrls = [];
-
 
 // DOM Elements
 let hamburgerMenu, sidebar, overlay, closeBtn, container;
@@ -26,35 +25,58 @@ let totalEntriesSpan, totalPhotosSpan, plantsDocumentedSpan, tagsUsedSpan;
 let timelineView, gridView, cardsView;
 let timelineViewBtn, gridViewBtn, cardsViewBtn;
 
-// Initialize database
+// Initialize database - VERSIONE HYBRID
 async function initDatabase() {
     try {
         console.log('📖 Inizializzazione Diary database...');
         
         dbSync = new DatabaseSync();
-        const localData = dbSync.loadFromLocal();
         
-        // Load diary data
+        // Carica dati locali (priorità per le foto)
+        const localData = dbSync.loadFromLocal();
         diaryEntries = localData.diaryEntries || [];
         quickNotes = localData.quickNotes || '';
-        
-        // Load peppers for plant selector
         peppers = localData.peppers || [];
         
-        // Sync with cloud
-        const syncedData = await dbSync.sync();
-        diaryEntries = syncedData.diaryEntries || [];
-        quickNotes = syncedData.quickNotes || '';
-        peppers = syncedData.peppers || [];
+        // Solo sync cloud per metadata se necessario
+        try {
+            console.log('☁️ Syncing metadata from cloud...');
+            const cloudData = await dbSync.loadFromCloud();
+            
+            // Aggiorna solo i dati non-foto
+            if (cloudData.peppers) peppers = cloudData.peppers;
+            if (cloudData.quickNotes) quickNotes = cloudData.quickNotes;
+            
+            // Per le entry, mantieni le foto locali ma aggiorna metadata
+            if (cloudData.diaryEntries && cloudData.diaryEntries.length > 0) {
+                // Merge intelligente: foto locali + metadata cloud
+                const localEntryMap = new Map(diaryEntries.map(e => [e.id, e]));
+                
+                cloudData.diaryEntries.forEach(cloudEntry => {
+                    const localEntry = localEntryMap.get(cloudEntry.id);
+                    if (localEntry && localEntry.photos && localEntry.photos.some(p => p.data)) {
+                        // Mantieni foto locali
+                        cloudEntry.photos = localEntry.photos;
+                    }
+                });
+                
+                diaryEntries = cloudData.diaryEntries;
+            }
+            
+        } catch (cloudError) {
+            console.log('⚠️ Cloud sync failed, using local data');
+        }
         
         console.log('✅ Diary inizializzato:', {
             entries: diaryEntries.length,
             peppers: peppers.length,
-            notesLength: quickNotes.length
+            notesLength: quickNotes.length,
+            photosLocal: diaryEntries.filter(e => e.photos && e.photos.some(p => p.data)).length
         });
         
     } catch (error) {
         console.error('❌ Errore inizializzazione Diary:', error);
+        // Fallback ai dati locali
         const localData = dbSync?.loadFromLocal() || {};
         diaryEntries = localData.diaryEntries || [];
         quickNotes = localData.quickNotes || '';
@@ -69,6 +91,8 @@ function initSidebar() {
     overlay = document.getElementById('overlay');
     closeBtn = document.getElementById('closeBtn');
     container = document.querySelector('.container');
+    
+    if (!hamburgerMenu || !sidebar) return;
     
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.add('active');
@@ -122,24 +146,29 @@ function initDiaryPage() {
     gridViewBtn = document.getElementById('gridViewBtn');
     cardsViewBtn = document.getElementById('cardsViewBtn');
     
+    if (!addEntryBtn || !entryModal || !entryForm) {
+        console.error('❌ Essential diary elements not found');
+        return;
+    }
+    
     // Event listeners
     addEntryBtn.addEventListener('click', openEntryModal);
-    galleryViewBtn.addEventListener('click', () => switchView('grid'));
-    calendarViewBtn.addEventListener('click', showCalendarView);
+    galleryViewBtn?.addEventListener('click', () => switchView('grid'));
+    calendarViewBtn?.addEventListener('click', showCalendarView);
     
-    plantFilter.addEventListener('change', applyFilters);
-    tagFilter.addEventListener('change', applyFilters);
-    searchInput.addEventListener('input', debounce(applyFilters, 300));
+    plantFilter?.addEventListener('change', applyFilters);
+    tagFilter?.addEventListener('change', applyFilters);
+    searchInput?.addEventListener('input', debounce(applyFilters, 300));
     
     // View switchers
-    timelineViewBtn.addEventListener('click', () => switchView('timeline'));
-    gridViewBtn.addEventListener('click', () => switchView('grid'));
-    cardsViewBtn.addEventListener('click', () => switchView('cards'));
+    timelineViewBtn?.addEventListener('click', () => switchView('timeline'));
+    gridViewBtn?.addEventListener('click', () => switchView('grid'));
+    cardsViewBtn?.addEventListener('click', () => switchView('cards'));
     
     // Modal events
-    document.getElementById('closeEntryModal').addEventListener('click', closeEntryModal);
-    document.getElementById('cancelEntryBtn').addEventListener('click', closeEntryModal);
-    document.getElementById('closePhotoModal').addEventListener('click', closePhotoModal);
+    document.getElementById('closeEntryModal')?.addEventListener('click', closeEntryModal);
+    document.getElementById('cancelEntryBtn')?.addEventListener('click', closeEntryModal);
+    document.getElementById('closePhotoModal')?.addEventListener('click', closePhotoModal);
     entryForm.addEventListener('submit', saveEntry);
     
     // Photo upload events
@@ -154,7 +183,10 @@ function initDiaryPage() {
     // Set today's date as default
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('entryDate').value = now.toISOString().slice(0, 16);
+    const dateInput = document.getElementById('entryDate');
+    if (dateInput) {
+        dateInput.value = now.toISOString().slice(0, 16);
+    }
     
     // Populate selectors
     populatePlantSelector();
@@ -166,8 +198,8 @@ function initDiaryPage() {
 
 // Initialize Quick Notes
 function initQuickNotes() {
-    // Add Quick Notes section to HTML (if not already there)
     const diaryContent = document.querySelector('.diary-content');
+    if (!diaryContent) return;
     
     const quickNotesSection = document.createElement('div');
     quickNotesSection.className = 'quick-notes-section';
@@ -202,41 +234,67 @@ Esempio:
     
     // Get textarea and load content
     quickNotesTextarea = document.getElementById('quickNotesTextarea');
-    quickNotesTextarea.value = quickNotes || '';
-    
-    // Auto-save on typing (debounced)
-    quickNotesTextarea.addEventListener('input', debounce(saveQuickNotes, 1000));
-    
-    // Manual save button
-    document.getElementById('saveNotesBtn').addEventListener('click', saveQuickNotes);
-    
-    // Clear button
-    document.getElementById('clearNotesBtn').addEventListener('click', function() {
-        if (confirm('Sei sicuro di voler pulire tutte le note?')) {
-            quickNotesTextarea.value = '';
-            saveQuickNotes();
-        }
-    });
+    if (quickNotesTextarea) {
+        quickNotesTextarea.value = quickNotes || '';
+        
+        // Auto-save on typing (debounced)
+        quickNotesTextarea.addEventListener('input', debounce(saveQuickNotes, 1000));
+        
+        // Manual save button
+        document.getElementById('saveNotesBtn')?.addEventListener('click', saveQuickNotes);
+        
+        // Clear button
+        document.getElementById('clearNotesBtn')?.addEventListener('click', function() {
+            if (confirm('Sei sicuro di voler pulire tutte le note?')) {
+                quickNotesTextarea.value = '';
+                saveQuickNotes();
+            }
+        });
+    }
 }
 
 // Save quick notes
 async function saveQuickNotes() {
+    if (!quickNotesTextarea) return;
+    
     quickNotes = quickNotesTextarea.value;
     
     try {
-        await dbSync.saveData({
+        // Salvataggio local + cloud sync
+        dbSync.saveToLocal({
             peppers: peppers,
             diaryEntries: diaryEntries,
             quickNotes: quickNotes,
             lastUpdate: new Date().toISOString()
         });
         
+        // Cloud sync solo per metadata
+        const diaryEntriesForCloud = diaryEntries.map(entry => ({
+            ...entry,
+            photos: entry.photos ? entry.photos.map(photo => ({
+                id: photo.id,
+                filename: photo.filename,
+                size: photo.size,
+                type: photo.type,
+                uploadDate: photo.uploadDate
+            })) : []
+        }));
+        
+        await dbSync.saveToCloud({
+            peppers: peppers,
+            diaryEntries: diaryEntriesForCloud,
+            quickNotes: quickNotes,
+            lastUpdate: new Date().toISOString()
+        });
+        
         // Show saved indicator
         const indicator = document.getElementById('notesSavedIndicator');
-        indicator.style.opacity = '1';
-        setTimeout(() => {
-            indicator.style.opacity = '0.5';
-        }, 2000);
+        if (indicator) {
+            indicator.style.opacity = '1';
+            setTimeout(() => {
+                indicator.style.opacity = '0.5';
+            }, 2000);
+        }
         
         console.log('✅ Quick notes salvate');
         
@@ -247,6 +305,8 @@ async function saveQuickNotes() {
 
 // Initialize photo upload
 function initPhotoUpload() {
+    if (!uploadZone || !entryPhotos) return;
+    
     // Click to select files
     uploadZone.addEventListener('click', () => {
         entryPhotos.click();
@@ -293,19 +353,21 @@ async function handleFiles(files) {
     // Limit to 10 files
     const limitedFiles = files.slice(0, 10);
     
-    // ⬅️ NUOVO: Salva i file nelle variabili globali
+    // Salva i file nelle variabili globali
     selectedFiles = Array.from(limitedFiles);
     photoDataUrls = [];
     
     // Clear previous preview
-    photoPreview.innerHTML = '';
+    if (photoPreview) {
+        photoPreview.innerHTML = '';
+    }
     
     for (let i = 0; i < limitedFiles.length; i++) {
         const file = limitedFiles[i];
         console.log('🖼️ Creating preview for:', file.name);
         
         try {
-            // ⬅️ NUOVO: Converti subito in Base64 e salva
+            // Converti subito in Base64 e salva
             const base64 = await fileToBase64(file);
             photoDataUrls.push({
                 file: file,
@@ -328,7 +390,9 @@ async function handleFiles(files) {
                 </div>
             `;
             
-            photoPreview.appendChild(previewDiv);
+            if (photoPreview) {
+                photoPreview.appendChild(previewDiv);
+            }
             
         } catch (error) {
             console.error('❌ Error processing file:', file.name, error);
@@ -336,17 +400,35 @@ async function handleFiles(files) {
     }
     
     // Show preview area
-    photoPreview.style.display = 'grid';
+    if (photoPreview) {
+        photoPreview.style.display = 'grid';
+    }
     
     console.log('✅ Files processed and saved:', photoDataUrls.length);
+    
+    // Add remove functionality
+    if (photoPreview) {
+        photoPreview.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-photo-btn')) {
+                const index = parseInt(e.target.closest('.remove-photo-btn').dataset.index);
+                const previewItem = e.target.closest('.photo-preview-item');
+                previewItem.remove();
+                
+                // Remove from arrays
+                photoDataUrls = photoDataUrls.filter(item => item.index !== index);
+                selectedFiles = selectedFiles.filter((file, i) => i !== index);
+            }
+        });
+    }
 }
-
 
 // Initialize tags input
 function initTagsInput() {
     const tagsInput = document.getElementById('entryTags');
     const selectedTagsDiv = document.getElementById('selectedTags');
     const suggestions = document.querySelectorAll('.tag-suggestion');
+    
+    if (!tagsInput || !selectedTagsDiv) return;
     
     // Handle Enter key for adding tags
     tagsInput.addEventListener('keydown', function(e) {
@@ -405,6 +487,8 @@ function populatePlantSelector() {
     const plantSelect = document.getElementById('entryPlant');
     const plantFilterSelect = document.getElementById('plantFilter');
     
+    if (!plantSelect || !plantFilterSelect) return;
+    
     // Clear existing options (keep first option)
     plantSelect.innerHTML = '<option value="">Nessuna pianta specifica</option>';
     plantFilterSelect.innerHTML = '<option value="all">Tutte le Piante</option>';
@@ -424,6 +508,8 @@ function populatePlantSelector() {
 
 // Open entry modal
 function openEntryModal(entryId = null) {
+    if (!entryModal || !entryForm) return;
+    
     if (entryId) {
         // Edit existing entry
         const entry = diaryEntries.find(e => e.id === entryId);
@@ -438,13 +524,20 @@ function openEntryModal(entryId = null) {
         entryForm.reset();
         entryForm.removeAttribute('data-id');
         selectedTags = [];
-        photoPreview.innerHTML = '';
-        photoPreview.style.display = 'none';
+        selectedFiles = [];
+        photoDataUrls = [];
+        if (photoPreview) {
+            photoPreview.innerHTML = '';
+            photoPreview.style.display = 'none';
+        }
         
         // Set current date/time
         const now = new Date();
         now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-        document.getElementById('entryDate').value = now.toISOString().slice(0, 16);
+        const dateInput = document.getElementById('entryDate');
+        if (dateInput) {
+            dateInput.value = now.toISOString().slice(0, 16);
+        }
     }
     
     entryModal.style.display = 'flex';
@@ -453,20 +546,23 @@ function openEntryModal(entryId = null) {
 
 // Close entry modal - VERSIONE FIXED
 function closeEntryModal() {
+    if (!entryModal) return;
+    
     entryModal.style.display = 'none';
     document.body.style.overflow = 'auto';
     selectedTags = [];
     
-    // ⬅️ RESET le variabili globali
+    // Reset le variabili globali
     selectedFiles = [];
     photoDataUrls = [];
     
-    photoPreview.innerHTML = '';
-    photoPreview.style.display = 'none';
+    if (photoPreview) {
+        photoPreview.innerHTML = '';
+        photoPreview.style.display = 'none';
+    }
 }
 
-
-// Save entry - VERSIONE FIXED
+// Save entry - VERSIONE LOCAL PHOTOS + CLOUD METADATA
 async function saveEntry(e) {
     e.preventDefault();
     
@@ -476,10 +572,10 @@ async function saveEntry(e) {
     const formData = new FormData(entryForm);
     const entryId = entryForm.getAttribute('data-id');
     
-    // ⬅️ NUOVO: Usa i file pre-convertiti invece del file input
+    // Processa le foto per storage locale
     const photos = [];
     
-    console.log('🔄 Processing', photoDataUrls.length, 'pre-converted photos...');
+    console.log('🔄 Processing', photoDataUrls.length, 'photos for local storage...');
     
     for (let i = 0; i < photoDataUrls.length; i++) {
         const photoData = photoDataUrls[i];
@@ -491,23 +587,21 @@ async function saveEntry(e) {
                 filename: photoData.file.name,
                 size: photoData.file.size,
                 type: photoData.file.type,
-                data: photoData.base64, // ⬅️ USA Base64 PRE-CONVERTITO
+                data: photoData.base64, // FOTO SALVATA LOCALMENTE
                 uploadDate: new Date().toISOString()
             };
             
             photos.push(photoObj);
-            console.log('✅ Photo object created:', {
-                filename: photoObj.filename,
-                dataLength: photoObj.data.length
-            });
+            console.log('✅ Photo stored locally:', photoObj.filename);
             
         } catch (error) {
             console.error('❌ Error processing photo:', error);
         }
     }
     
-    console.log('📷 Total photos processed:', photos.length);
+    console.log('📷 Total photos stored locally:', photos.length);
     
+    // Entry con foto per storage locale
     const entryData = {
         id: entryId ? parseInt(entryId) : Date.now(),
         date: formData.get('entryDate'),
@@ -517,16 +611,18 @@ async function saveEntry(e) {
         title: formData.get('entryTitle'),
         content: formData.get('entryContent'),
         tags: [...selectedTags],
-        photos: photos, // ⬅️ USA I PHOTOS PRE-CONVERTITI
+        photos: photos, // FOTO COMPLETE LOCALI
         createdAt: entryId ? 
             diaryEntries.find(e => e.id == entryId)?.createdAt || new Date().toISOString() :
             new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
     
-    console.log('📝 Entry data to save:', {
+    console.log('📝 Entry data:', {
         title: entryData.title,
-        photosCount: entryData.photos.length
+        photosCount: entryData.photos.length,
+        localPhotos: 'FULL',
+        cloudPhotos: 'METADATA_ONLY'
     });
     
     if (entryId) {
@@ -538,68 +634,68 @@ async function saveEntry(e) {
                 console.log('⚠️ No new photos, keeping existing ones');
                 entryData.photos = diaryEntries[index].photos || [];
             }
-            diaryEntries[index] = entryData;
+            diaryEntries[index] = entryData; // LOCAL: foto complete
         }
     } else {
         // Add new entry
-        diaryEntries.unshift(entryData);
+        diaryEntries.unshift(entryData); // LOCAL: foto complete
     }
     
+    // SALVATAGGIO SPLIT
     try {
-        await dbSync.saveData({
+        // 1. SALVATAGGIO LOCALE (con foto complete)
+        console.log('💾 Saving locally with photos...');
+        dbSync.saveToLocal({
             peppers: peppers,
-            diaryEntries: diaryEntries,
+            diaryEntries: diaryEntries, // CON FOTO COMPLETE
             quickNotes: quickNotes,
             lastUpdate: new Date().toISOString()
         });
+        console.log('✅ Saved locally with photos');
         
-        console.log('✅ Entry salvata');
+        // 2. SALVATAGGIO CLOUD (solo metadata, NO foto)
+        console.log('☁️ Syncing metadata to cloud...');
+        const diaryEntriesForCloud = diaryEntries.map(entry => ({
+            ...entry,
+            photos: entry.photos ? entry.photos.map(photo => ({
+                id: photo.id,
+                filename: photo.filename,
+                size: photo.size,
+                type: photo.type,
+                uploadDate: photo.uploadDate
+                // NO data field per il cloud
+            })) : []
+        }));
         
-        closeEntryModal();
-        renderCurrentView();
-        updateStatistics();
+        await dbSync.saveToCloud({
+            peppers: peppers,
+            diaryEntries: diaryEntriesForCloud, // SOLO METADATA
+            quickNotes: quickNotes,
+            lastUpdate: new Date().toISOString()
+        });
+        console.log('✅ Metadata synced to cloud');
         
     } catch (error) {
-        console.error('❌ Errore salvataggio entry:', error);
-        alert('Errore durante il salvataggio. Riprova.');
+        console.error('❌ Sync error (photos saved locally):', error);
+        // Le foto sono comunque salvate localmente!
     }
+    
+    console.log('✅ Entry saved successfully');
+    
+    closeEntryModal();
+    renderCurrentView();
+    updateStatistics();
 }
 
-
-// Modifica la funzione fileToBase64 per comprimere
-function fileToBase64(file, quality = 0.7) {
+// Convert file to base64
+function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                
-                // Ridimensiona se troppo grande
-                let { width, height } = img;
-                const maxWidth = 800;
-                
-                if (width > maxWidth) {
-                    height = (height * maxWidth) / width;
-                    width = maxWidth;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Converti con compressione
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedDataUrl);
-            };
-            img.src = e.target.result;
-        };
-        reader.onerror = reject;
         reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
     });
 }
-
 
 // Switch view
 function switchView(view) {
@@ -607,11 +703,13 @@ function switchView(view) {
     
     // Update buttons
     document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById(view + 'ViewBtn').classList.add('active');
+    const viewBtn = document.getElementById(view + 'ViewBtn');
+    if (viewBtn) viewBtn.classList.add('active');
     
     // Update views
     document.querySelectorAll('.diary-view').forEach(v => v.classList.remove('active'));
-    document.getElementById(view + 'View').classList.add('active');
+    const viewElement = document.getElementById(view + 'View');
+    if (viewElement) viewElement.classList.add('active');
     
     renderCurrentView();
 }
@@ -634,6 +732,7 @@ function renderCurrentView() {
 // Render timeline view
 function renderTimelineView() {
     const timeline = document.getElementById('diaryTimeline');
+    if (!timeline) return;
     
     if (diaryEntries.length === 0) {
         timeline.innerHTML = `
@@ -709,14 +808,19 @@ function renderTimelineView() {
     `).join('');
 }
 
-// Render grid view (photo gallery)
+// Render grid view (photo gallery) - VERSIONE CORRETTA
 function renderGridView() {
     const grid = document.getElementById('diaryGrid');
+    
+    if (!grid) {
+        console.error('❌ Grid container not found');
+        return;
+    }
     
     // Get all photos from all entries
     const allPhotos = [];
     diaryEntries.forEach(entry => {
-        if (entry.photos) {
+        if (entry.photos && Array.isArray(entry.photos)) {
             entry.photos.forEach((photo, index) => {
                 allPhotos.push({
                     ...photo,
@@ -728,6 +832,8 @@ function renderGridView() {
             });
         }
     });
+    
+    console.log('📷 Total photos found:', allPhotos.length);
     
     if (allPhotos.length === 0) {
         grid.innerHTML = `
@@ -743,22 +849,34 @@ function renderGridView() {
     // Sort by date (newest first)
     allPhotos.sort((a, b) => new Date(b.entryDate) - new Date(a.entryDate));
     
-    grid.innerHTML = allPhotos.map(photo => `
-        <div class="grid-photo-item" onclick="openPhotoModal(${photo.entryId}, ${photo.photoIndex})">
-            <img src="${photo.data}" alt="${photo.filename}">
-            <div class="grid-photo-overlay">
-                <div class="grid-photo-info">
-                    <div class="grid-photo-title">${photo.entryTitle}</div>
-                    <div class="grid-photo-date">${new Date(photo.entryDate).toLocaleDateString('it-IT')}</div>
+    grid.innerHTML = allPhotos.map(photo => {
+        // Verifica che photo.data esista
+        if (!photo.data) {
+            console.warn('⚠️ Photo without data:', photo);
+            return '';
+        }
+        
+        return `
+            <div class="grid-photo-item" onclick="openPhotoModal(${photo.entryId}, ${photo.photoIndex})">
+                <img src="${photo.data}" alt="${photo.filename || 'Photo'}" 
+                     onerror="console.error('❌ Failed to load image:', this.src.substring(0, 50) + '...')">
+                <div class="grid-photo-overlay">
+                    <div class="grid-photo-info">
+                        <div class="grid-photo-title">${photo.entryTitle}</div>
+                        <div class="grid-photo-date">${new Date(photo.entryDate).toLocaleDateString('it-IT')}</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).filter(item => item !== '').join('');
+    
+    console.log('✅ Grid rendered with', allPhotos.length, 'photos');
 }
 
 // Render cards view
 function renderCardsView() {
     const cards = document.getElementById('diaryCards');
+    if (!cards) return;
     
     if (diaryEntries.length === 0) {
         cards.innerHTML = `
@@ -833,8 +951,10 @@ function openPhotoModal(entryId, photoIndex = 0) {
     currentPhotoIndex = photoIndex;
     
     updatePhotoModal();
-    photoModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
+    if (photoModal) {
+        photoModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 // Update photo modal content
@@ -849,48 +969,65 @@ function updatePhotoModal() {
     const photoTagsDisplay = document.getElementById('photoTagsDisplay');
     const photoDescriptionDisplay = document.getElementById('photoDescriptionDisplay');
     
-    photoImg.src = photo.data;
-    photoTitle.textContent = currentPhotoEntry.title;
-    photoDate.textContent = new Date(currentPhotoEntry.date).toLocaleDateString('it-IT');
-    photoCounter.textContent = `${currentPhotoIndex + 1} / ${currentPhotoEntry.photos.length}`;
+    if (photoImg) photoImg.src = photo.data;
+    if (photoTitle) photoTitle.textContent = currentPhotoEntry.title;
+    if (photoDate) photoDate.textContent = new Date(currentPhotoEntry.date).toLocaleDateString('it-IT');
+    if (photoCounter) photoCounter.textContent = `${currentPhotoIndex + 1} / ${currentPhotoEntry.photos.length}`;
     
     // Update tags
-    if (currentPhotoEntry.tags && currentPhotoEntry.tags.length > 0) {
-        photoTagsDisplay.innerHTML = currentPhotoEntry.tags.map(tag => 
-            `<span class="photo-tag">${tag}</span>`
-        ).join('');
-    } else {
-        photoTagsDisplay.innerHTML = '';
+    if (photoTagsDisplay) {
+        if (currentPhotoEntry.tags && currentPhotoEntry.tags.length > 0) {
+            photoTagsDisplay.innerHTML = currentPhotoEntry.tags.map(tag => 
+                `<span class="photo-tag">${tag}</span>`
+            ).join('');
+        } else {
+            photoTagsDisplay.innerHTML = '';
+        }
     }
     
     // Update description
-    photoDescriptionDisplay.textContent = currentPhotoEntry.content || '';
+    if (photoDescriptionDisplay) {
+        photoDescriptionDisplay.textContent = currentPhotoEntry.content || '';
+    }
     
     // Update navigation buttons
-    document.getElementById('prevPhotoBtn').disabled = currentPhotoIndex === 0;
-    document.getElementById('nextPhotoBtn').disabled = currentPhotoIndex === currentPhotoEntry.photos.length - 1;
+    const prevBtn = document.getElementById('prevPhotoBtn');
+    const nextBtn = document.getElementById('nextPhotoBtn');
+    if (prevBtn) prevBtn.disabled = currentPhotoIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentPhotoIndex === currentPhotoEntry.photos.length - 1;
 }
 
 // Close photo modal
 function closePhotoModal() {
-    photoModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+    if (photoModal) {
+        photoModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
     currentPhotoEntry = null;
     currentPhotoIndex = 0;
 }
 
 // Photo navigation
-document.getElementById('prevPhotoBtn').addEventListener('click', function() {
-    if (currentPhotoIndex > 0) {
-        currentPhotoIndex--;
-        updatePhotoModal();
+document.addEventListener('DOMContentLoaded', function() {
+    const prevBtn = document.getElementById('prevPhotoBtn');
+    const nextBtn = document.getElementById('nextPhotoBtn');
+    
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            if (currentPhotoIndex > 0) {
+                currentPhotoIndex--;
+                updatePhotoModal();
+            }
+        });
     }
-});
-
-document.getElementById('nextPhotoBtn').addEventListener('click', function() {
-    if (currentPhotoEntry && currentPhotoIndex < currentPhotoEntry.photos.length - 1) {
-        currentPhotoIndex++;
-        updatePhotoModal();
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            if (currentPhotoEntry && currentPhotoIndex < currentPhotoEntry.photos.length - 1) {
+                currentPhotoIndex++;
+                updatePhotoModal();
+            }
+        });
     }
 });
 
@@ -903,9 +1040,29 @@ async function deleteEntry(entryId) {
     diaryEntries = diaryEntries.filter(e => e.id !== entryId);
     
     try {
-        await dbSync.saveData({
+        // Local save
+        dbSync.saveToLocal({
             peppers: peppers,
             diaryEntries: diaryEntries,
+            quickNotes: quickNotes,
+            lastUpdate: new Date().toISOString()
+        });
+        
+        // Cloud sync (metadata only)
+        const diaryEntriesForCloud = diaryEntries.map(entry => ({
+            ...entry,
+            photos: entry.photos ? entry.photos.map(photo => ({
+                id: photo.id,
+                filename: photo.filename,
+                size: photo.size,
+                type: photo.type,
+                uploadDate: photo.uploadDate
+            })) : []
+        }));
+        
+        await dbSync.saveToCloud({
+            peppers: peppers,
+            diaryEntries: diaryEntriesForCloud,
             quickNotes: quickNotes,
             lastUpdate: new Date().toISOString()
         });
@@ -919,11 +1076,11 @@ async function deleteEntry(entryId) {
     }
 }
 
-// Apply filters
+// Apply filters - VERSIONE CORRETTA
 function applyFilters() {
-    const plantId = plantFilter.value;
-    const tag = tagFilter.value;
-    const searchTerm = searchInput.value.toLowerCase();
+    const plantId = plantFilter?.value;
+    const tag = tagFilter?.value;
+    const searchTerm = searchInput?.value.toLowerCase();
     
     let filteredEntries = [...diaryEntries];
     
@@ -954,22 +1111,22 @@ function applyFilters() {
     const originalEntries = diaryEntries;
     diaryEntries = filteredEntries;
     renderCurrentView();
-    diaryEntries = originalEntries;
+    diaryEntries = originalEntries; // RESTORE ORIGINAL DATA
 }
 
 // Update statistics
 function updateStatistics() {
-    totalEntriesSpan.textContent = diaryEntries.length;
+    if (totalEntriesSpan) totalEntriesSpan.textContent = diaryEntries.length;
     
     const totalPhotos = diaryEntries.reduce((sum, entry) => 
         sum + (entry.photos ? entry.photos.length : 0), 0
     );
-    totalPhotosSpan.textContent = totalPhotos;
+    if (totalPhotosSpan) totalPhotosSpan.textContent = totalPhotos;
     
     const plantsWithEntries = new Set(
         diaryEntries.filter(e => e.plantId).map(e => e.plantId)
     ).size;
-    plantsDocumentedSpan.textContent = plantsWithEntries;
+    if (plantsDocumentedSpan) plantsDocumentedSpan.textContent = plantsWithEntries;
     
     const allTags = new Set();
     diaryEntries.forEach(entry => {
@@ -977,7 +1134,7 @@ function updateStatistics() {
             entry.tags.forEach(tag => allTags.add(tag));
         }
     });
-    tagsUsedSpan.textContent = allTags.size;
+    if (tagsUsedSpan) tagsUsedSpan.textContent = allTags.size;
 }
 
 // Show calendar view (placeholder)
