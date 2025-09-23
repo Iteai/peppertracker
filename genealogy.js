@@ -247,10 +247,13 @@ function applyFilters() {
 }
 
 // Render the tree
+// Render the tree
 function renderTree() {
+    // Clear ALL previous content first
+    g.selectAll('*').remove();
+    
     if (nodes.length === 0) {
         // Show empty state
-        g.selectAll('*').remove();
         g.append('text')
             .attr('x', 400)
             .attr('y', 300)
@@ -260,10 +263,6 @@ function renderTree() {
             .text('Nessuna varietà da visualizzare');
         return;
     }
-
-    // Clear previous render
-    g.selectAll('.link').remove();
-    g.selectAll('.node').remove();
 
     // Create force simulation
     simulation = d3.forceSimulation(nodes)
@@ -482,9 +481,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Load data
         await initDatabase();
         
-        // Build and render tree
-        buildTreeData();
-        renderTree();
+        // Build and render tree (SOLO UNA VOLTA)
+        if (databasePeppers.length > 0) {
+            buildTreeData();
+            renderTree();
+        } else {
+            // Se non ci sono dati, mostra messaggio
+            g.selectAll('*').remove();
+            g.append('text')
+                .attr('x', 400)
+                .attr('y', 300)
+                .attr('text-anchor', 'middle')
+                .attr('fill', '#ccc')
+                .attr('font-size', '24px')
+                .text('Aggiungi varietà ibride nel Database per vedere l\'albero');
+        }
         
         const isConnected = await dbSync.testConnection();
         if (isConnected) {
