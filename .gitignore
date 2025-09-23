@@ -2,3 +2,6 @@
 .env
 .vercel
 workflow.txt
+deploy.bat
+backup.bat
+quick.bat
