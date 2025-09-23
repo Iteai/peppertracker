@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Albero Genealogico - Pepper Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <span class="close-btn" id="closeBtn">&times;</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="genealogy.html" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="#" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="#" id="galleryLink"><i class="fas fa-images"></i> Galleria</a></li>
+            <li><a href="index.html" id="trackerLink"><i class="fas fa-seedling"></i> Tracker</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay for closing sidebar -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">🌳 Albero Genealogico</h1>
+        
+        <!-- Controls -->
+        <div class="genealogy-controls">
+            <div class="control-group">
+                <label for="speciesFilter">Filtra per Specie:</label>
+                <select id="speciesFilter" class="control-select">
+                    <option value="all">Tutte le Specie</option>
+                    <option value="Capsicum annuum">Capsicum annuum</option>
+                    <option value="Capsicum chinense">Capsicum chinense</option>
+                    <option value="Capsicum baccatum">Capsicum baccatum</option>
+                    <option value="Capsicum frutescens">Capsicum frutescens</option>
+                    <option value="Capsicum pubescens">Capsicum pubescens</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="generationFilter">Filtra per Generazione:</label>
+                <select id="generationFilter" class="control-select">
+                    <option value="all">Tutte le Generazioni</option>
+                    <option value="0">F0 (Varietà Pure)</option>
+                    <option value="1">F1 (Prima Generazione)</option>
+                    <option value="2">F2 (Seconda Generazione)</option>
+                    <option value="3">F3+ (Generazioni Successive)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <button id="resetZoom" class="btn btn-secondary">
+                    <i class="fas fa-search-minus"></i> Reset Zoom
+                </button>
+                <button id="exportPDF" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Esporta PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Tree Visualization -->
+        <div class="genealogy-container">
+            <div id="genealogy-tree" class="tree-svg"></div>
+            
+            <!-- Legend -->
+            <div class="tree-legend">
+                <h3>Legenda</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #27ae60;"></div>
+                    <span>Varietà Pure (F0)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>Ibridi F1</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e74c3c;"></div>
+                    <span>Ibridi F2+</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #9b59b6;"></div>
+                    <span>Selecionato</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div id="info-panel" class="info-panel" style="display: none;">
+            <h3 id="info-title">Dettagli Varietà</h3>
+            <div id="info-content">
+                <!-- Dynamic content -->
+            </div>
+            <button id="close-info" class="btn btn-secondary">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- D3.js Library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="database-sync.js"></script>
+    <script src="genealogy.js"></script>
+</body>
+</html>
