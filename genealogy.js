@@ -312,12 +312,23 @@ function renderTree() {
         return;
     }
 
-    // Create force simulation
+    // Create force simulation - CON ATTRITO MAGGIORE
     simulation = d3.forceSimulation(nodes)
-        .force('link', d3.forceLink(links).id(d => d.id).distance(100))
-        .force('charge', d3.forceManyBody().strength(-300))
+        .force('link', d3.forceLink(links)
+            .id(d => d.id)
+            .distance(120)
+            .strength(0.5)  // Ridotto per link più morbidi
+        )
+        .force('charge', d3.forceManyBody()
+            .strength(-400)  // Aumentato per più spazio
+        )
         .force('center', d3.forceCenter(400, 300))
-        .force('collision', d3.forceCollide().radius(35));
+        .force('collision', d3.forceCollide()
+            .radius(40)  // Aumentato per evitare sovrapposizioni
+            .strength(0.8)
+        )
+        .velocityDecay(0.7)  // CHIAVE: Aumenta attrito (default 0.4)
+        .alphaDecay(0.05);   // Rallenta la simulazione più velocemente
 
     // Create links
     const link = g.append('g')
@@ -423,22 +434,34 @@ function renderTree() {
     }, 1000);
 }
 
-// Drag functions
+// Drag functions - CON PIÙ CONTROLLO
 function dragstarted(event, d) {
-    if (!event.active) simulation.alphaTarget(0.3).restart();
+    if (!event.active) simulation.alphaTarget(0.1).restart(); // Ridotto da 0.3
     d.fx = d.x;
     d.fy = d.y;
+    
+    // Ferma immediatamente la velocità del nodo
+    d.vx = 0;
+    d.vy = 0;
 }
 
 function dragged(event, d) {
     d.fx = event.x;
     d.fy = event.y;
+    
+    // Mantieni velocità zero durante il drag
+    d.vx = 0;
+    d.vy = 0;
 }
 
 function dragended(event, d) {
     if (!event.active) simulation.alphaTarget(0);
+    
+    // Permetti movimento ma con zero inerzia
     d.fx = null;
     d.fy = null;
+    d.vx = 0;
+    d.vy = 0;
 }
 
 // Show info panel
