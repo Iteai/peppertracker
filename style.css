@@ -760,6 +760,7 @@ tr:hover {
     border: 1px solid #555;
     max-width: 300px;
     backdrop-filter: blur(10px);
+    margin-left: 20px;
 }
 
 .info-panel h3 {
