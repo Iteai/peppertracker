@@ -434,41 +434,40 @@ function renderTree() {
     }, 1000);
 }
 
-// Drag functions - SOLO IL NODO SELEZIONATO SI MUOVE
+// Drag functions - VERSIONE FUNZIONANTE
 function dragstarted(event, d) {
-    // NON riavviare la simulazione - così gli altri nodi restano fermi
-    // if (!event.active) simulation.alphaTarget(0.1).restart();
+    // Riavvia la simulazione con meno intensità
+    if (!event.active) simulation.alphaTarget(0.05).restart();
     
-    // Congela TUTTI i nodi
-    nodes.forEach(node => {
-        node.fx = node.x;
-        node.fy = node.y;
-        node.vx = node.vy = 0;
-    });
-    
-    // Sblocca solo il nodo che stai trascinando
+    // Fissa il nodo trascinato alla posizione corrente
     d.fx = d.x;
     d.fy = d.y;
-    d.vx = d.vy = 0;
+    
+    // Congela tutti gli ALTRI nodi nelle loro posizioni
+    nodes.forEach(node => {
+        if (node !== d) {
+            node.fx = node.x;
+            node.fy = node.y;
+            node.vx = node.vy = 0;
+        }
+    });
 }
 
 function dragged(event, d) {
-    // Muovi solo il nodo selezionato
+    // Aggiorna solo la posizione del nodo trascinato
     d.fx = event.x;
     d.fy = event.y;
-    d.vx = d.vy = 0;
 }
 
 function dragended(event, d) {
-    // NON riavviare la simulazione
-    // if (!event.active) simulation.alphaTarget(0);
+    // Ferma la simulazione
+    if (!event.active) simulation.alphaTarget(0);
     
-    // Rilascia solo il nodo trascinato
+    // Rilascia il nodo trascinato (permetti movimento libero)
     d.fx = null;
     d.fy = null;
-    d.vx = d.vy = 0;
     
-    // Mantieni tutti gli altri nodi fissi nelle loro posizioni attuali
+    // Mantieni tutti gli altri nodi fissi
     nodes.forEach(node => {
         if (node !== d) {
             node.fx = node.x;
@@ -476,7 +475,6 @@ function dragended(event, d) {
         }
     });
 }
-
 
 // Show info panel
 function showInfoPanel(nodeData) {
