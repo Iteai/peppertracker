@@ -1462,3 +1462,1139 @@ tr:hover {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ===== DIARY & GALLERY STYLES ===== */
+
+/* Diary Header */
+.diary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2c2c2c;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.diary-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.diary-filters {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    background: #444;
+    color: var(--font-color);
+    border: 1px solid #555;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'Cinzel', serif;
+    min-width: 140px;
+}
+
+.filter-select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 5px rgba(217, 83, 79, 0.3);
+}
+
+.search-input {
+    background: #444;
+    color: var(--font-color);
+    border: 1px solid #555;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'Cinzel', serif;
+    min-width: 200px;
+}
+
+.search-input:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 5px rgba(217, 83, 79, 0.3);
+}
+
+/* Diary Statistics */
+.diary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.diary-stats .stat-card {
+    background: linear-gradient(135deg, #2c2c2c 0%, #222 100%);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.diary-stats .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-color);
+}
+
+.diary-stats .stat-icon {
+    font-size: 24px;
+    width: 40px;
+    height: 40px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.diary-stats .stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+/* View Switcher */
+.view-switcher {
+    display: flex;
+    background: #2c2c2c;
+    border-radius: 6px;
+    padding: 4px;
+    margin-bottom: 20px;
+    border: 1px solid #444;
+}
+
+.view-btn {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Cinzel', serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.view-btn:hover {
+    color: var(--accent-color);
+    background: rgba(217, 83, 79, 0.1);
+}
+
+.view-btn.active {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Quick Notes Section */
+.quick-notes-section {
+    background: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.quick-notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.quick-notes-header h3 {
+    margin: 0;
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notes-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.quick-notes-textarea {
+    width: 100%;
+    min-height: 120px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 12px;
+    color: var(--font-color);
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s ease;
+}
+
+.quick-notes-textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 5px rgba(217, 83, 79, 0.3);
+}
+
+.quick-notes-textarea::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+.notes-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #888;
+}
+
+.notes-saved {
+    color: #5cb85c;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+}
+
+/* Diary Views */
+.diary-view {
+    display: none;
+}
+
+.diary-view.active {
+    display: block;
+}
+
+/* Timeline View */
+.timeline-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.diary-timeline {
+    position: relative;
+}
+
+.diary-timeline::before {
+    content: '';
+    position: absolute;
+    left: 30px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-color), transparent);
+}
+
+.timeline-entry {
+    display: flex;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.timeline-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.date-circle {
+    width: 60px;
+    height: 60px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+    border: 4px solid #1a1a1a;
+}
+
+.date-text {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #ccc;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.timeline-content {
+    flex: 1;
+    background: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    margin-left: 10px;
+}
+
+.timeline-content::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 20px;
+    border-right: 10px solid #2c2c2c;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+}
+
+.entry-header {
+    margin-bottom: 15px;
+}
+
+.entry-title {
+    margin: 0 0 8px 0;
+    color: var(--accent-color);
+    font-size: 20px;
+}
+
+.entry-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.entry-plant {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.entry-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin: 15px 0;
+    max-width: 500px;
+}
+
+.entry-photo {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    border: 2px solid transparent;
+}
+
+.entry-photo:hover {
+    transform: scale(1.05);
+    border-color: var(--accent-color);
+}
+
+.more-photos {
+    width: 100%;
+    height: 120px;
+    background: #444;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--accent-color);
+    transition: background-color 0.2s ease;
+}
+
+.more-photos:hover {
+    background: #555;
+}
+
+.entry-content {
+    margin: 15px 0;
+    line-height: 1.6;
+    color: #ddd;
+}
+
+.entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 15px 0;
+}
+
+.entry-tag {
+    background: #444;
+    color: var(--accent-color);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    border: 1px solid #555;
+}
+
+.entry-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+/* Grid View (Gallery) */
+.diary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.grid-photo-item {
+    aspect-ratio: 1;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.grid-photo-item:hover {
+    transform: scale(1.05);
+}
+
+.grid-photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.grid-photo-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 15px 10px 10px;
+    color: white;
+}
+
+.grid-photo-info {
+    text-align: center;
+}
+
+.grid-photo-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.grid-photo-date {
+    font-size: 12px;
+    color: #ccc;
+}
+
+/* Cards View */
+.diary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.diary-card {
+    background: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.diary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-color);
+}
+
+.card-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card-photo-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.card-content {
+    padding: 20px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 10px;
+}
+
+.card-title {
+    margin: 0;
+    color: var(--accent-color);
+    font-size: 18px;
+    flex: 1;
+}
+
+.card-date {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+}
+
+.card-plant {
+    color: #5cb85c;
+    font-size: 14px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.card-description {
+    color: #ddd;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 15px;
+}
+
+.card-tag {
+    background: #444;
+    color: var(--accent-color);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+.card-tag-more {
+    background: #555;
+    color: #ccc;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 11px;
+}
+
+.card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Photo Upload */
+.photo-upload-area {
+    margin-bottom: 20px;
+}
+
+.upload-zone {
+    border: 2px dashed #555;
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    background: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--accent-color);
+    background: rgba(217, 83, 79, 0.1);
+}
+
+.upload-zone i {
+    font-size: 48px;
+    color: #666;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.upload-zone p {
+    margin: 0 0 10px;
+    color: #ccc;
+}
+
+.upload-link {
+    color: var(--accent-color);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.upload-zone small {
+    color: #888;
+    font-size: 12px;
+}
+
+.photo-preview {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.photo-preview-item {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #444;
+}
+
+.photo-preview-item img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.photo-preview-overlay {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+
+.remove-photo-btn {
+    background: rgba(217, 83, 79, 0.9);
+    border: none;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.photo-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px;
+    font-size: 10px;
+    text-align: center;
+}
+
+/* Tags Input */
+.tags-input-container {
+    margin-bottom: 10px;
+}
+
+.selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    min-height: 30px;
+    padding: 8px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 4px;
+}
+
+.selected-tag {
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.remove-tag {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.remove-tag:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.suggested-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.tag-suggestion {
+    background: #444;
+    color: #ccc;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #555;
+    transition: all 0.2s ease;
+}
+
+.tag-suggestion:hover {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* Photo Modal (Lightbox) */
+.photo-modal {
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+.photo-modal-content {
+    background: #2c2c2c;
+    border-radius: 8px;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.photo-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #444;
+    background: #333;
+}
+
+.photo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.photo-info span:first-child {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+.photo-info span:last-child {
+    font-size: 14px;
+    color: #ccc;
+}
+
+.photo-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.photo-nav-btn {
+    background: #444;
+    border: 1px solid #555;
+    color: #ccc;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.photo-nav-btn:hover:not(:disabled) {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.photo-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.photo-close-btn {
+    background: #d9534f;
+    border: 1px solid #d9534f;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.photo-close-btn:hover {
+    background: #c9302c;
+    border-color: #c9302c;
+}
+
+.photo-viewer {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    min-height: 400px;
+}
+
+.photo-viewer img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+}
+
+.photo-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #444;
+    background: #333;
+}
+
+.photo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.photo-tag {
+    background: #444;
+    color: var(--accent-color);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+.photo-description {
+    color: #ddd;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+/* Empty States */
+.no-entries,
+.no-photos,
+.no-cards {
+    text-align: center;
+    padding: 60px 20px;
+    color: #888;
+}
+
+.no-entries i,
+.no-photos i,
+.no-cards i {
+    font-size: 64px;
+    margin-bottom: 20px;
+    color: #555;
+}
+
+.no-entries h3,
+.no-photos h3,
+.no-cards h3 {
+    margin: 0 0 10px;
+    color: #ccc;
+}
+
+.no-entries p,
+.no-photos p,
+.no-cards p {
+    margin: 0 0 20px;
+    color: #888;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .diary-cards {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    
+    .diary-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .diary-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .diary-actions {
+        justify-content: center;
+    }
+    
+    .diary-filters {
+        justify-content: center;
+    }
+    
+    .filter-select,
+    .search-input {
+        min-width: auto;
+        flex: 1;
+    }
+    
+    .diary-stats {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .timeline-entry {
+        flex-direction: column;
+        margin-bottom: 40px;
+    }
+    
+    .timeline-date {
+        align-self: flex-start;
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+    
+    .timeline-content {
+        margin-left: 0;
+    }
+    
+    .timeline-content::before {
+        display: none;
+    }
+    
+    .diary-timeline::before {
+        display: none;
+    }
+    
+    .diary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .diary-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    
+    .photo-preview {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    
+    .entry-photos {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    
+    .view-switcher {
+        justify-content: center;
+    }
+    
+    .view-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .diary-stats .stat-card {
+        padding: 12px;
+    }
+    
+    .diary-stats .stat-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 18px;
+    }
+    
+    .diary-stats .stat-value {
+        font-size: 16px;
+    }
+    
+    .date-circle {
+        width: 50px;
+        height: 50px;
+        font-size: 16px;
+    }
+    
+    .entry-title {
+        font-size: 18px;
+    }
+    
+    .timeline-content {
+        padding: 15px;
+    }
+    
+    .diary-card {
+        margin: 0 10px;
+    }
+    
+    .card-image {
+        height: 150px;
+    }
+    
+    .photo-modal-content {
+        max-width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .photo-modal-header {
+        padding: 10px 15px;
+    }
+    
+    .photo-viewer {
+        min-height: 300px;
+    }
+    
+    .photo-viewer img {
+        max-height: 60vh;
+    }
+    
+    .suggested-tags {
+        gap: 4px;
+    }
+    
+    .tag-suggestion {
+        font-size: 11px;
+        padding: 3px 6px;
+    }
+}
+
+/* Animation Enhancements */
+.timeline-entry,
+.diary-card,
+.grid-photo-item {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.photo-preview-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Loading States */
+.loading-entries {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+}
+
+.loading-entries::before {
+    content: "📖";
+    font-size: 32px;
+    display: block;
+    margin-bottom: 10px;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Print Styles */
+@media print {
+    .diary-header,
+    .view-switcher,
+    .entry-actions,
+    .card-actions,
+    .photo-controls,
+    .sidebar,
+    .hamburger-menu,
+    .overlay {
+        display: none !important;
+    }
+    
+    .container {
+        margin: 0 !important;
+        max-width: none !important;
+    }
+    
+    .timeline-content {
+        border: 1px solid #ccc !important;
+        page-break-inside: avoid;
+    }
+    
+    .diary-card {
+        page-break-inside: avoid;
+        border: 1px solid #ccc !important;
+    }
+}
+
+/* Accessibility Improvements */
+.btn:focus,
+.filter-select:focus,
+.search-input:focus,
+.view-btn:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.photo-nav-btn:focus,
+.photo-close-btn:focus {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .timeline-entry,
+    .diary-card {
+        border-width: 2px;
+    }
+    
+    .entry-photo,
+    .grid-photo-item img {
+        border: 2px solid #fff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .timeline-entry,
+    .diary-card,
+    .grid-photo-item,
+    .photo-preview-item {
+        animation: none;
+    }
+    
+    .entry-photo:hover,
+    .grid-photo-item:hover,
+    .diary-card:hover {
+        transform: none;
+    }
+}

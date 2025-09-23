@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diario Fotografico - Pepper Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <span class="close-btn" id="closeBtn">&times;</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="genealogy.html" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="diary.html" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="#" id="galleryLink"><i class="fas fa-images"></i> Galleria</a></li>
+            <li><a href="tracker.html" id="trackerLink"><i class="fas fa-chart-line"></i> Tracker</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay for closing sidebar -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">📖 Diario Fotografico</h1>
+        
+        <!-- Diary Header Controls -->
+        <div class="diary-header">
+            <div class="diary-actions">
+                <button id="addEntryBtn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nuova Entry
+                </button>
+                <button id="galleryViewBtn" class="btn btn-secondary">
+                    <i class="fas fa-th-large"></i> Vista Galleria
+                </button>
+                <button id="calendarViewBtn" class="btn btn-secondary">
+                    <i class="fas fa-calendar"></i> Vista Calendario
+                </button>
+            </div>
+            
+            <div class="diary-filters">
+                <select id="plantFilter" class="filter-select">
+                    <option value="all">Tutte le Piante</option>
+                </select>
+                
+                <select id="tagFilter" class="filter-select">
+                    <option value="all">Tutti i Tags</option>
+                    <option value="esperimento">Esperimento</option>
+                    <option value="problemi">Problemi</option>
+                    <option value="successo">Successo</option>
+                    <option value="crescita">Crescita</option>
+                    <option value="fioritura">Fioritura</option>
+                    <option value="impollinazione">Impollinazione</option>
+                    <option value="raccolta">Raccolta</option>
+                </select>
+                
+                <input type="text" id="searchInput" class="search-input" placeholder="Cerca nel diario..." />
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="diary-stats">
+            <div class="stat-card">
+                <div class="stat-icon">📖</div>
+                <div class="stat-content">
+                    <span class="stat-label">Totale Entry</span>
+                    <span class="stat-value" id="totalEntries">0</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">📷</div>
+                <div class="stat-content">
+                    <span class="stat-label">Foto Caricate</span>
+                    <span class="stat-value" id="totalPhotos">0</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">🌶️</div>
+                <div class="stat-content">
+                    <span class="stat-label">Piante Documentate</span>
+                    <span class="stat-value" id="plantsDocumented">0</span>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">🏷️</div>
+                <div class="stat-content">
+                    <span class="stat-label">Tags Utilizzati</span>
+                    <span class="stat-value" id="tagsUsed">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Switcher -->
+        <div class="view-switcher">
+            <button id="timelineViewBtn" class="view-btn active">
+                <i class="fas fa-list"></i> Timeline
+            </button>
+            <button id="gridViewBtn" class="view-btn">
+                <i class="fas fa-th"></i> Griglia
+            </button>
+            <button id="cardsViewBtn" class="view-btn">
+                <i class="fas fa-clone"></i> Cards
+            </button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="diary-content">
+            <!-- Timeline View (Default) -->
+            <div id="timelineView" class="diary-view active">
+                <div class="timeline-container">
+                    <div id="diaryTimeline" class="diary-timeline">
+                        <div class="no-entries">
+                            <i class="fas fa-book-open"></i>
+                            <h3>Nessuna entry nel diario</h3>
+                            <p>Inizia a documentare i tuoi esperimenti con i peperoncini!</p>
+                            <button class="btn btn-primary" onclick="openEntryModal()">
+                                <i class="fas fa-plus"></i> Prima Entry
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div id="gridView" class="diary-view">
+                <div id="diaryGrid" class="diary-grid">
+                    <!-- Photo grid will be populated here -->
+                </div>
+            </div>
+
+            <!-- Cards View -->
+            <div id="cardsView" class="diary-view">
+                <div id="diaryCards" class="diary-cards">
+                    <!-- Entry cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Modal -->
+    <div id="entryModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="entryModalTitle">Nuova Entry</h2>
+                <span class="close" id="closeEntryModal">&times;</span>
+            </div>
+            <form id="entryForm" enctype="multipart/form-data">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="entryDate">Data:</label>
+                        <input type="datetime-local" id="entryDate" name="entryDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="entryPlant">Pianta:</label>
+                        <select id="entryPlant" name="entryPlant">
+                            <option value="">Nessuna pianta specifica</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryTitle">Titolo:</label>
+                    <input type="text" id="entryTitle" name="entryTitle" required placeholder="Descrizione breve dell'osservazione">
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryTags">Tags:</label>
+                    <div class="tags-input-container">
+                        <input type="text" id="entryTags" name="entryTags" placeholder="Digita tag e premi Invio">
+                        <div id="selectedTags" class="selected-tags"></div>
+                    </div>
+                    <div class="suggested-tags">
+                        <span class="tag-suggestion" data-tag="esperimento">esperimento</span>
+                        <span class="tag-suggestion" data-tag="problemi">problemi</span>
+                        <span class="tag-suggestion" data-tag="successo">successo</span>
+                        <span class="tag-suggestion" data-tag="crescita">crescita</span>
+                        <span class="tag-suggestion" data-tag="fioritura">fioritura</span>
+                        <span class="tag-suggestion" data-tag="impollinazione">impollinazione</span>
+                        <span class="tag-suggestion" data-tag="raccolta">raccolta</span>
+                        <span class="tag-suggestion" data-tag="ibrido">ibrido</span>
+                        <span class="tag-suggestion" data-tag="arlecchino">arlecchino</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryPhotos">Foto:</label>
+                    <div class="photo-upload-area">
+                        <input type="file" id="entryPhotos" name="entryPhotos" multiple accept="image/*" style="display: none;">
+                        <div class="upload-zone" id="uploadZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Trascina le foto qui o <span class="upload-link">clicca per selezionare</span></p>
+                            <small>Supporta: JPG, PNG, HEIC • Max 10 foto per entry</small>
+                        </div>
+                        <div id="photoPreview" class="photo-preview"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="entryContent">Descrizione Dettagliata:</label>
+                    <textarea id="entryContent" name="entryContent" rows="6" 
+                              placeholder="Descrivi in dettaglio le osservazioni, esperimenti, cambiamenti notati..."></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Salva Entry
+                    </button>
+                    <button type="button" id="cancelEntryBtn" class="btn btn-secondary">Annulla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div id="photoModal" class="modal photo-modal">
+        <div class="photo-modal-content">
+            <div class="photo-modal-header">
+                <div class="photo-info">
+                    <span id="photoTitle"></span>
+                    <span id="photoDate"></span>
+                </div>
+                <div class="photo-controls">
+                    <button id="prevPhotoBtn" class="photo-nav-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="photoCounter">1 / 1</span>
+                    <button id="nextPhotoBtn" class="photo-nav-btn">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button id="closePhotoModal" class="photo-close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="photo-viewer">
+                <img id="photoViewerImg" src="" alt="">
+            </div>
+            <div class="photo-modal-footer">
+                <div class="photo-tags" id="photoTagsDisplay"></div>
+                <div class="photo-description" id="photoDescriptionDisplay"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sync.js"></script>
+    <script src="diary.js"></script>
+</body>
+</html>
