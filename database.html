@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database - Pepper Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <span class="close-btn" id="closeBtn">&times;</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="#" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="#" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="#" id="galleryLink"><i class="fas fa-images"></i> Galleria</a></li>
+            <li><a href="index.html" id="trackerLink"><i class="fas fa-seedling"></i> Tracker</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay for closing sidebar -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">Database Peperoncini</h1>
+        
+        <div class="database-section">
+            <div class="table-header">
+                <h2>Tutti i Peperoncini</h2>
+                <div class="table-controls">
+                    <input type="text" id="databaseSearchInput" placeholder="Cerca nel database..." class="search-input">
+                    <select id="typeFilter" class="search-input">
+                        <option value="all">Tutti i Tipi</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="nonhybrid">Non Hybrid</option>
+                    </select>
+                    <select id="sortBy" class="search-input">
+                        <option value="date-desc">Data (Più Recente)</option>
+                        <option value="date-asc">Data (Più Vecchio)</option>
+                        <option value="name-asc">Nome (A-Z)</option>
+                        <option value="name-desc">Nome (Z-A)</option>
+                        <option value="species-asc">Specie (A-Z)</option>
+                    </select>
+                    <button id="addDatabasePepperBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Aggiungi al Database
+                    </button>
+                </div>
+            </div>
+            <div class="table-container database-table">
+                <table id="databaseTable">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Specie</th>
+                            <th>Tipo</th>
+                            <th>Pianta Madre</th>
+                            <th>Pianta Padre</th>
+                            <th>Data Aggiunta</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody id="databaseTableBody">
+                        <!-- Database peppers will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Database Pepper -->
+    <div id="databaseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="databaseModalTitle">Aggiungi al Database</h2>
+                <span class="close" id="closeDatabaseModal">&times;</span>
+            </div>
+            <form id="databaseForm">
+                <div class="form-group">
+                    <label for="databasePepperName">Nome:</label>
+                    <input type="text" id="databasePepperName" name="databasePepperName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="databasePepperSpecies">Specie:</label>
+                    <select id="databasePepperSpecies" name="databasePepperSpecies" required>
+                        <option value="">Seleziona specie</option>
+                        <option value="Capsicum annuum">Capsicum annuum</option>
+                        <option value="Capsicum chinense">Capsicum chinense</option>
+                        <option value="Capsicum baccatum">Capsicum baccatum</option>
+                        <option value="Capsicum frutescens">Capsicum frutescens</option>
+                        <option value="Capsicum pubescens">Capsicum pubescens</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isHybrid" name="isHybrid"> Hybrid?
+                    </label>
+                </div>
+
+                <div id="hybridFields" class="hybrid-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="motherPlant">Pianta Madre:</label>
+                        <select id="motherPlant" name="motherPlant">
+                            <option value="">Seleziona pianta madre</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fatherPlant">Pianta Padre:</label>
+                        <select id="fatherPlant" name="fatherPlant">
+                            <option value="">Seleziona pianta padre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Salva nel Database</button>
+                    <button type="button" id="cancelDatabaseBtn" class="btn btn-secondary">Annulla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="database-sync.js"></script>
+    <script src="database.js"></script>
+</body>
+</html>

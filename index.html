@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pepper Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger-menu" id="hamburgerMenu">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- Sidebar Menu -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <span class="close-btn" id="closeBtn">&times;</span>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="#" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="#" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="#" id="galleryLink"><i class="fas fa-images"></i> Galleria</a></li>
+            <li><a href="index.html" id="trackerLink"><i class="fas fa-seedling"></i> Tracker</a></li>
+        </ul>
+    </div>
+
+    <!-- Overlay for closing sidebar -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1 class="title">Pepper Tracker</h1>
+
+        <div class="content-grid">
+            <!-- Left side - Chart -->
+            <div class="chart-section">
+                <h2>Statistiche Piante</h2>
+                <div class="chart-controls">
+                    <select id="chartType">
+                        <option value="height">Altezza (cm)</option>
+                        <option value="stage">Stato della Pianta</option>
+                        <option value="light">Intensità Luce (%)</option>
+                        <option value="nutrients">Nutrimento</option>
+                    </select>
+                    <select id="timeRange">
+                        <option value="week">Ultima Settimana</option>
+                        <option value="month">Ultimo Mese</option>
+                        <option value="all">Tutti i Dati</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="plantChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Right side - Peppers Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Peperoncini Recenti</h2>
+                    <div class="table-controls">
+                        <input type="text" id="searchInput" placeholder="Cerca peperoncini..." class="search-input">
+                        <button id="addPepperBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Aggiungi Nuovo
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="peppersTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Specie</th>
+                                <th>Data</th>
+                                <th>Stato</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="peppersTableBody">
+                            <!-- Peppers will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Adding/Editing Pepper -->
+    <div id="pepperModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Aggiungi Nuovo Peperoncino</h2>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <form id="pepperForm">
+                <div class="form-group">
+                    <label for="pepperName">Nome:</label>
+                    <input type="text" id="pepperName" name="pepperName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pepperSpecies">Specie:</label>
+                    <select id="pepperSpecies" name="pepperSpecies" required>
+                        <option value="">Seleziona specie</option>
+                        <option value="Capsicum annuum">Capsicum annuum</option>
+                        <option value="Capsicum chinense">Capsicum chinense</option>
+                        <option value="Capsicum baccatum">Capsicum baccatum</option>
+                        <option value="Capsicum frutescens">Capsicum frutescens</option>
+                        <option value="Capsicum pubescens">Capsicum pubescens</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pepperDate">Data:</label>
+                    <input type="date" id="pepperDate" name="pepperDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="plantStage">Stato della Pianta:</label>
+                    <select id="plantStage" name="plantStage" required>
+                        <option value="semina">Semina</option>
+                        <option value="germinazione">Germinazione</option>
+                        <option value="crescita">Crescita</option>
+                        <option value="fioritura">Fioritura</option>
+                        <option value="fruttificazione">Fruttificazione</option>
+                        <option value="raccolta">Raccolta</option>
+                        <option value="raccoltasemi">Raccolta Semi</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="plantHeight">Altezza (cm):</label>
+                    <input type="number" id="plantHeight" name="plantHeight" min="0" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="lightIntensity">Intensità Luce (%):</label>
+                    <div class="slider-container">
+                        <input type="range" id="lightIntensity" name="lightIntensity" min="0" max="100" value="50" class="slider">
+                        <span id="lightValue" class="slider-value">50%</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="waterType">Tipo Acqua:</label>
+                    <select id="waterType" name="waterType">
+                        <option value="rubinetto">Rubinetto</option>
+                        <option value="osmotica">Osmotica</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Fertilizzanti:</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="fertilizer" value="PK Booster"> PK Booster</label>
+                        <label><input type="checkbox" name="fertilizer" value="CalMag"> CalMag</label>
+                        <label><input type="checkbox" name="fertilizer" value="NPK 7-5-5"> NPK 7-5-5</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fertilizerAmount">Quantità Fertilizzante (ml/L):</label>
+                    <input type="number" id="fertilizerAmount" name="fertilizerAmount" min="0" step="0.1">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Salva</button>
+                    <button type="button" id="cancelBtn" class="btn btn-secondary">Annulla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="sync.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
