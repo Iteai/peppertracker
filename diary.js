@@ -7,6 +7,9 @@ let selectedTags = [];
 let currentView = 'timeline';
 let currentPhotoIndex = 0;
 let currentPhotoEntry = null;
+let selectedFiles = []; 
+let photoDataUrls = [];
+
 
 // DOM Elements
 let hamburgerMenu, sidebar, overlay, closeBtn, container;
@@ -283,24 +286,39 @@ function handleFileSelect(e) {
     handleFiles(files);
 }
 
-// Handle multiple files
-function handleFiles(files) {
+// Handle multiple files - VERSIONE FIXED
+async function handleFiles(files) {
+    console.log('📁 handleFiles called with', files.length, 'files');
+    
     // Limit to 10 files
     const limitedFiles = files.slice(0, 10);
+    
+    // ⬅️ NUOVO: Salva i file nelle variabili globali
+    selectedFiles = Array.from(limitedFiles);
+    photoDataUrls = [];
     
     // Clear previous preview
     photoPreview.innerHTML = '';
     
-    limitedFiles.forEach((file, index) => {
-        const reader = new FileReader();
+    for (let i = 0; i < limitedFiles.length; i++) {
+        const file = limitedFiles[i];
+        console.log('🖼️ Creating preview for:', file.name);
         
-        reader.onload = function(e) {
+        try {
+            // ⬅️ NUOVO: Converti subito in Base64 e salva
+            const base64 = await fileToBase64(file);
+            photoDataUrls.push({
+                file: file,
+                base64: base64,
+                index: i
+            });
+            
             const previewDiv = document.createElement('div');
             previewDiv.className = 'photo-preview-item';
             previewDiv.innerHTML = `
-                <img src="${e.target.result}" alt="Preview ${index + 1}">
+                <img src="${base64}" alt="Preview ${i + 1}">
                 <div class="photo-preview-overlay">
-                    <button type="button" class="remove-photo-btn" data-index="${index}">
+                    <button type="button" class="remove-photo-btn" data-index="${i}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -311,30 +329,18 @@ function handleFiles(files) {
             `;
             
             photoPreview.appendChild(previewDiv);
-        };
-        
-        reader.readAsDataURL(file);
-    });
+            
+        } catch (error) {
+            console.error('❌ Error processing file:', file.name, error);
+        }
+    }
     
     // Show preview area
     photoPreview.style.display = 'grid';
     
-    // Add remove functionality
-    photoPreview.addEventListener('click', function(e) {
-        if (e.target.closest('.remove-photo-btn')) {
-            const index = parseInt(e.target.closest('.remove-photo-btn').dataset.index);
-            const previewItem = e.target.closest('.photo-preview-item');
-            previewItem.remove();
-            
-            // Update file input (create new FileList without removed file)
-            const dt = new DataTransfer();
-            Array.from(entryPhotos.files).forEach((file, i) => {
-                if (i !== index) dt.items.add(file);
-            });
-            entryPhotos.files = dt.files;
-        }
-    });
+    console.log('✅ Files processed and saved:', photoDataUrls.length);
 }
+
 
 // Initialize tags input
 function initTagsInput() {
@@ -445,59 +451,58 @@ function openEntryModal(entryId = null) {
     document.body.style.overflow = 'hidden';
 }
 
-// Close entry modal
+// Close entry modal - VERSIONE FIXED
 function closeEntryModal() {
     entryModal.style.display = 'none';
     document.body.style.overflow = 'auto';
     selectedTags = [];
+    
+    // ⬅️ RESET le variabili globali
+    selectedFiles = [];
+    photoDataUrls = [];
+    
     photoPreview.innerHTML = '';
+    photoPreview.style.display = 'none';
 }
 
-// Save entry
-// Save entry - VERSIONE DEBUG
+
+// Save entry - VERSIONE FIXED
 async function saveEntry(e) {
     e.preventDefault();
     
     console.log('🚀 Saving entry...');
+    console.log('📷 PhotoDataUrls available:', photoDataUrls.length);
     
     const formData = new FormData(entryForm);
     const entryId = entryForm.getAttribute('data-id');
     
-    console.log('📁 Files from input:', entryPhotos.files);
-    console.log('📁 Files count:', entryPhotos.files.length);
-    
-    // Convert photos to base64
+    // ⬅️ NUOVO: Usa i file pre-convertiti invece del file input
     const photos = [];
-    const files = Array.from(entryPhotos.files);
     
-    console.log('🔄 Processing', files.length, 'files...');
+    console.log('🔄 Processing', photoDataUrls.length, 'pre-converted photos...');
     
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        console.log('📷 Processing file:', file.name, file.size, 'bytes');
+    for (let i = 0; i < photoDataUrls.length; i++) {
+        const photoData = photoDataUrls[i];
+        console.log('📷 Processing photo:', photoData.file.name);
         
         try {
-            const base64 = await fileToBase64(file);
-            console.log('✅ Base64 conversion successful, length:', base64.length);
-            
             const photoObj = {
                 id: Date.now() + Math.random(),
-                filename: file.name,
-                size: file.size,
-                type: file.type,
-                data: base64,
+                filename: photoData.file.name,
+                size: photoData.file.size,
+                type: photoData.file.type,
+                data: photoData.base64, // ⬅️ USA Base64 PRE-CONVERTITO
                 uploadDate: new Date().toISOString()
             };
             
             photos.push(photoObj);
-            console.log('📷 Photo object created:', {
+            console.log('✅ Photo object created:', {
                 filename: photoObj.filename,
-                size: photoObj.size,
                 dataLength: photoObj.data.length
             });
             
         } catch (error) {
-            console.error('❌ Error converting file to base64:', error);
+            console.error('❌ Error processing photo:', error);
         }
     }
     
@@ -512,7 +517,7 @@ async function saveEntry(e) {
         title: formData.get('entryTitle'),
         content: formData.get('entryContent'),
         tags: [...selectedTags],
-        photos: photos, // ⬅️ ASSICURATI CHE QUESTO ARRAY NON SIA VUOTO
+        photos: photos, // ⬅️ USA I PHOTOS PRE-CONVERTITI
         createdAt: entryId ? 
             diaryEntries.find(e => e.id == entryId)?.createdAt || new Date().toISOString() :
             new Date().toISOString(),
@@ -521,12 +526,7 @@ async function saveEntry(e) {
     
     console.log('📝 Entry data to save:', {
         title: entryData.title,
-        photosCount: entryData.photos.length,
-        photosData: entryData.photos.map(p => ({
-            filename: p.filename,
-            size: p.size,
-            hasData: !!p.data
-        }))
+        photosCount: entryData.photos.length
     });
     
     if (entryId) {
@@ -544,11 +544,6 @@ async function saveEntry(e) {
         // Add new entry
         diaryEntries.unshift(entryData);
     }
-    
-    console.log('💾 Final diary entries:', diaryEntries.map(e => ({
-        title: e.title,
-        photosCount: e.photos ? e.photos.length : 0
-    })));
     
     try {
         await dbSync.saveData({
