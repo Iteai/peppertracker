@@ -1,4 +1,4 @@
-// Main application script with GitHub sync - ROBUST VERSION
+// Main application script with GitHub sync - NO SCOVILLE VERSION
 let peppers = [];
 let dbSync;
 
@@ -14,7 +14,7 @@ async function initDatabase() {
         
         console.log('📊 Raw data loaded from GitHub:', data);
         
-        // ⬅️ FIX: Handle different data structures
+        // Handle different data structures
         let loadedPeppers = [];
         
         if (data.peppers) {
@@ -26,7 +26,20 @@ async function initDatabase() {
             loadedPeppers = [];
         }
         
-        peppers = loadedPeppers;
+        // Convert data structure for compatibility (NO SCOVILLE)
+        peppers = loadedPeppers.map(pepper => ({
+            id: pepper.id,
+            name: pepper.name,
+            type: pepper.species || pepper.type || 'Non specificato',
+            origin: pepper.origin || 'Non specificato',
+            description: pepper.description || '',
+            dateAdded: pepper.dateAdded || new Date().toISOString(),
+            stage: pepper.stage || null,
+            height: pepper.height || null,
+            isHybrid: pepper.isHybrid || false,
+            varieties: pepper.varieties || [],
+            crossings: pepper.crossings || []
+        }));
         
         console.log('✅ Database inizializzato con GitHub:', peppers.length, 'peperoncini');
         console.log('📋 Loaded peppers:', peppers);
@@ -45,7 +58,7 @@ async function initDatabase() {
     } catch (error) {
         console.error('❌ Errore inizializzazione database:', error);
         
-        // ⬅️ FIX: Robust fallback
+        // Robust fallback
         try {
             const localData = dbSync?.loadFromLocal() || {};
             console.log('📊 Local fallback data:', localData);
@@ -67,7 +80,6 @@ async function initDatabase() {
         return { peppers: peppers };
     }
 }
-
 
 // Test GitHub connection
 async function testConnection() {
@@ -182,7 +194,7 @@ function initTable() {
     }
 }
 
-// ⬅️ FIX: Safe render table with array validation
+// Safe render table with array validation
 function safeRenderTable() {
     try {
         if (!Array.isArray(peppers)) {
@@ -197,14 +209,14 @@ function safeRenderTable() {
     }
 }
 
-// Render peppers table
+// Render peppers table - NO SCOVILLE VERSION
 function renderTable() {
     const tableBody = document.getElementById('peppersTableBody');
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
-    // ⬅️ FIX: Safety check
+    // Safety check
     if (!Array.isArray(peppers)) {
         peppers = [];
     }
@@ -221,11 +233,23 @@ function renderTable() {
             <i class="fas fa-trash"></i>
         </button>`;
 
+        // Format date properly
+        let formattedDate = '-';
+        if (pepper.dateAdded) {
+            try {
+                const date = new Date(pepper.dateAdded);
+                formattedDate = date.toLocaleDateString('it-IT');
+            } catch (e) {
+                formattedDate = pepper.dateAdded;
+            }
+        }
+
+        // ⬅️ REMOVED: Scoville column completely
         row.innerHTML = `
             <td class="pepper-name">${pepper.name || 'Senza nome'}</td>
             <td class="pepper-type">${pepper.type || '-'}</td>
             <td class="pepper-origin">${pepper.origin || '-'}</td>
-            <td class="pepper-scoville">${pepper.scoville ? pepper.scoville.toLocaleString() + ' SHU' : '-'}</td>
+            <td class="pepper-date">${formattedDate}</td>
             <td class="pepper-actions">
                 ${editBtn}
                 ${deleteBtn}
@@ -252,29 +276,36 @@ function filterTable(searchTerm) {
     });
 }
 
-// Modal functionality
+// Modal functionality - NO SCOVILLE VERSION
 function openModal(pepper = null) {
     const modal = document.getElementById('pepperModal');
     const form = document.getElementById('pepperForm');
     const title = document.getElementById('modalTitle');
     
-    if (!modal || !form) return;
+    if (!modal || !form) {
+        console.error('❌ Modal or form not found');
+        return;
+    }
     
     if (pepper) {
         // Edit mode
-        title.textContent = 'Modifica Peperoncino';
+        if (title) title.textContent = 'Modifica Peperoncino';
         form.dataset.editId = pepper.id;
         
-        // Populate form
-        document.getElementById('pepperName').value = pepper.name || '';
-        document.getElementById('pepperType').value = pepper.type || '';
-        document.getElementById('pepperOrigin').value = pepper.origin || '';
-        document.getElementById('pepperScoville').value = pepper.scoville || '';
-        document.getElementById('pepperDescription').value = pepper.description || '';
+        // Safe populate form with null checks (NO SCOVILLE)
+        const nameField = document.getElementById('pepperName');
+        const typeField = document.getElementById('pepperType');
+        const originField = document.getElementById('pepperOrigin');
+        const descriptionField = document.getElementById('pepperDescription');
+        
+        if (nameField) nameField.value = pepper.name || '';
+        if (typeField) typeField.value = pepper.type || '';
+        if (originField) originField.value = pepper.origin || '';
+        if (descriptionField) descriptionField.value = pepper.description || '';
         
     } else {
         // Add mode
-        title.textContent = 'Aggiungi Peperoncino';
+        if (title) title.textContent = 'Aggiungi Peperoncino';
         form.removeAttribute('data-edit-id');
         form.reset();
     }
@@ -320,18 +351,17 @@ async function deletePepper(id) {
     }
 }
 
-// Form submission - FIXED VERSION
+// Form submission - NO SCOVILLE VERSION
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
     const editId = e.target.dataset.editId;
     
-    // ⬅️ FIX: Safe form data extraction with null checks
+    // Safe form data extraction with null checks (NO SCOVILLE)
     const pepperName = formData.get('pepperName');
     const pepperType = formData.get('pepperType');
     const pepperOrigin = formData.get('pepperOrigin');
-    const pepperScoville = formData.get('pepperScoville');
     const pepperDescription = formData.get('pepperDescription');
     
     const pepperData = {
@@ -339,7 +369,6 @@ async function handleFormSubmit(e) {
         name: pepperName ? pepperName.trim() : '',
         type: pepperType ? pepperType.trim() : '',
         origin: pepperOrigin ? pepperOrigin.trim() : '',
-        scoville: pepperScoville && pepperScoville.trim() ? parseInt(pepperScoville.trim()) : null,
         description: pepperDescription ? pepperDescription.trim() : '',
         dateAdded: editId ? 
             peppers.find(p => p.id == editId)?.dateAdded || new Date().toISOString() : 
@@ -356,7 +385,7 @@ async function handleFormSubmit(e) {
     }
     
     try {
-        // ⬅️ FIX: Ensure peppers is array
+        // Ensure peppers is array
         if (!Array.isArray(peppers)) {
             peppers = [];
         }
@@ -384,10 +413,9 @@ async function handleFormSubmit(e) {
     }
 }
 
-
 // Update statistics
 function updateStats() {
-    // ⬅️ FIX: Safety checks
+    // Safety checks
     if (!Array.isArray(peppers)) {
         peppers = [];
     }
@@ -431,12 +459,12 @@ function updateStats() {
     showSystemStatus();
 }
 
-// Show recent peppers
+// Show recent peppers - NO SCOVILLE VERSION
 function showRecentPeppers() {
     const recentElement = document.getElementById('recentPeppers');
     if (!recentElement) return;
     
-    // ⬅️ FIX: Safety check
+    // Safety check
     if (!Array.isArray(peppers)) {
         peppers = [];
     }
@@ -458,6 +486,7 @@ function showRecentPeppers() {
         return;
     }
     
+    // ⬅️ REMOVED: Scoville display from recent peppers
     recentElement.innerHTML = recent.map(pepper => `
         <div class="recent-item">
             <div class="recent-info">
@@ -467,7 +496,6 @@ function showRecentPeppers() {
             </div>
             <div class="recent-meta">
                 <span class="date">${new Date(pepper.dateAdded).toLocaleDateString('it-IT')}</span>
-                ${pepper.scoville ? `<span class="scoville">${pepper.scoville.toLocaleString()} SHU</span>` : ''}
             </div>
         </div>
     `).join('');
@@ -501,7 +529,7 @@ function showSystemStatus() {
     testConnection();
 }
 
-// Initialize chart
+// Initialize chart - Growth chart
 function initChart() {
     const chartCanvas = document.getElementById('plantChart');
     if (!chartCanvas || typeof Chart === 'undefined') return;
@@ -513,30 +541,34 @@ function initChart() {
     
     const ctx = chartCanvas.getContext('2d');
     
-    // ⬅️ FIX: Safety check
+    // Safety check
     if (!Array.isArray(peppers)) {
         peppers = [];
     }
     
-    // Prepare data
-    const typeData = {};
+    // Monthly growth chart
+    const monthlyData = {};
     peppers.forEach(pepper => {
-        const type = pepper.type || 'Non specificato';
-        typeData[type] = (typeData[type] || 0) + 1;
+        const date = new Date(pepper.dateAdded);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
     });
     
+    const labels = Object.keys(monthlyData).sort();
+    const data = labels.map(label => monthlyData[label]);
+    
     plantChart = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'line',
         data: {
-            labels: Object.keys(typeData),
+            labels: labels,
             datasets: [{
-                data: Object.values(typeData),
-                backgroundColor: [
-                    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
-                    '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f'
-                ],
+                label: 'Peperoncini Aggiunti',
+                data: data,
+                borderColor: '#ff6b6b',
+                backgroundColor: 'rgba(255, 107, 107, 0.1)',
                 borderWidth: 2,
-                borderColor: '#2c2c2c'
+                fill: true,
+                tension: 0.4
             }]
         },
         options: {
@@ -544,10 +576,26 @@ function initChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    position: 'bottom',
                     labels: {
-                        color: '#e0e0e0',
-                        padding: 15
+                        color: '#e0e0e0'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: '#e0e0e0'
+                    },
+                    grid: {
+                        color: '#444'
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: '#e0e0e0'
+                    },
+                    grid: {
+                        color: '#444'
                     }
                 }
             }
