@@ -1,222 +1,246 @@
-class DatabaseSync {
+/**
+ * GitHub-based sync system for Pepper Tracker
+ * Uses GitHub repository as free, unlimited JSON storage
+ */
+class GitHubSync {
     constructor() {
-        // Leggi dalle variabili d'ambiente Netlify
-        this.binId = this.getEnvironmentVariable('BIN_ID');
-        this.apiKey = this.getEnvironmentVariable('API_KEY');
-        this.localStorageKey = 'pepperTrackerData';
-        this.lastSyncKey = 'pepperTrackerLastSync';
-
-        console.log('🔧 Configurazione DatabaseSync:', {
-            hasBinId: !!this.binId,
-            hasApiKey: !!this.apiKey
+        // CONFIGURAZIONE - AGGIORNA QUESTI VALORI!
+        this.owner = 'Iteai'; // ⬅️ SOSTITUISCI con il tuo username GitHub
+        this.repo = 'peppertracker';         // ⬅️ Nome del tuo repository
+        this.branch = 'main';                 // ⬅️ Branch (main o master)
+        this.token = null;                    // ⬅️ Optional: Personal Access Token per repo privati
+        
+        this.baseUrl = `https://api.github.com/repos/${this.owner}/${this.repo}/contents`;
+        this.dataFiles = {
+            peppers: 'data/peppers.json',
+            diaryEntries: 'data/diary.json',
+            quickNotes: 'data/notes.json',
+            trackerData: 'data/tracker.json',
+            genealogy: 'data/genealogy.json'
+        };
+        
+        console.log('🔄 GitHubSync initialized:', {
+            owner: this.owner,
+            repo: this.repo,
+            branch: this.branch
         });
     }
-
-    getEnvironmentVariable(key) {
-        // Prova in ordine: Netlify env vars -> URL params -> fallback
-        return this.getFromNetlifyEnv(key) ||
-               this.getFromURLParams(key) ||
-               this.getFallback(key);
-    }
-
-    getFromNetlifyEnv(key) {
-        // Netlify injects env vars during build
-        if (typeof process !== 'undefined' && process.env) {
-            return process.env[key];
-        }
-        return null;
-    }
-
-    getFromURLParams(key) {
-        // Per testing locale: your-site.netlify.app?BIN_ID=xxx&API_KEY=yyy
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get(key);
-    }
-
-    getFallback(key) {
-        // Fallback per sviluppo locale
-        const fallbacks = {
-            'BIN_ID': '68d19787d0ea881f4086c3ed',
-            'API_KEY': '$2a$10$NcHrspX7bTeSu4bSYMXaceFMq2i1gRYBbFktXEHebmJz/2hs4C7UO'
-        };
-        return fallbacks[key];
-    }
-
-    // Carica dati dal cloud
-    async loadFromCloud() {
-        if (!this.binId || !this.apiKey) {
-            console.log('❌ Credenziali cloud mancanti');
-            throw new Error('Credenziali cloud mancanti');
-        }
-
+    
+    /**
+     * Save single file to GitHub
+     */
+    async saveFileToGitHub(filename, data) {
         try {
-            console.log('📡 Caricamento dati dal cloud...');
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}/latest`, {
-                headers: {
-                    'X-Master-Key': this.apiKey,
-                    'X-Bin-Meta': 'false'
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+            const url = `${this.baseUrl}/${filename}`;
+            
+            // Get current file SHA if exists
+            let sha = null;
+            try {
+                const response = await fetch(url, {
+                    headers: this.getHeaders()
+                });
+                if (response.ok) {
+                    const fileData = await response.json();
+                    sha = fileData.sha;
                 }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            } catch (e) {
+                // File doesn't exist, that's ok for new files
             }
-
-            const data = await response.json();
-            console.log('✅ Dati caricati dal cloud');
-            return data;
-        } catch (error) {
-            console.error('❌ Errore sync cloud:', error);
-            throw new Error('Errore nel caricamento dal cloud');
-        }
-    }
-
-    // Salva dati sul cloud
-    async saveToCloud(data) {
-        if (!this.binId || !this.apiKey) {
-            console.log('❌ Credenziali cloud mancanti');
-            return;
-        }
-
-        try {
-            console.log('📡 Salvataggio dati sul cloud...');
-            const response = await fetch(`https://api.jsonbin.io/v3/b/${this.binId}`, {
+            
+            const body = {
+                message: `Update ${filename} - ${new Date().toISOString()}`,
+                content: content,
+                branch: this.branch,
+                ...(sha && { sha })
+            };
+            
+            const response = await fetch(url, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Master-Key': this.apiKey,
-                    'X-Bin-Meta': 'false'
-                },
-                body: JSON.stringify(data)
+                headers: this.getHeaders(),
+                body: JSON.stringify(body)
             });
-
+            
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                const errorData = await response.text();
+                throw new Error(`GitHub API error ${response.status}: ${errorData}`);
             }
-
-            console.log('✅ Dati salvati sul cloud');
+            
+            console.log(`✅ Saved to GitHub: ${filename}`);
+            return true;
+            
         } catch (error) {
-            console.error('❌ Errore salvataggio cloud:', error);
-            throw error;
+            console.error(`❌ GitHub save error for ${filename}:`, error);
+            return false;
         }
     }
-
-    // Carica dati dal localStorage
-    loadFromLocal() {
+    
+    /**
+     * Load single file from GitHub
+     */
+    async loadFileFromGitHub(filename) {
         try {
-            console.log('📱 Dati caricati dal localStorage');
-            const data = localStorage.getItem(this.localStorageKey);
-            return data ? JSON.parse(data) : { peppers: [], lastUpdate: new Date().toISOString() };
+            const url = `${this.baseUrl}/${filename}`;
+            const response = await fetch(url, {
+                headers: this.getHeaders()
+            });
+            
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.log(`📄 File not found on GitHub: ${filename}`);
+                    return null;
+                }
+                throw new Error(`GitHub API error ${response.status}`);
+            }
+            
+            const fileData = await response.json();
+            const content = decodeURIComponent(escape(atob(fileData.content)));
+            return JSON.parse(content);
+            
         } catch (error) {
-            console.error('❌ Errore caricamento localStorage:', error);
-            return { peppers: [], lastUpdate: new Date().toISOString() };
+            console.error(`❌ GitHub load error for ${filename}:`, error);
+            return null;
         }
     }
-
-    // Salva dati nel localStorage
+    
+    /**
+     * Get headers for GitHub API
+     */
+    getHeaders() {
+        const headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+        };
+        
+        if (this.token) {
+            headers['Authorization'] = `token ${this.token}`;
+        }
+        
+        return headers;
+    }
+    
+    /**
+     * Save to local storage
+     */
     saveToLocal(data) {
         try {
-            localStorage.setItem(this.localStorageKey, JSON.stringify(data));
-            localStorage.setItem(this.lastSyncKey, new Date().toISOString());
-            console.log('✅ Dati salvati localmente');
+            localStorage.setItem('pepperTracker', JSON.stringify(data));
+            console.log('💾 Saved to local storage');
         } catch (error) {
-            console.error('❌ Errore salvataggio localStorage:', error);
+            console.error('❌ Local storage error:', error);
         }
     }
-
-    // Sincronizzazione intelligente
-    async sync() {
-        console.log('🔄 Inizio sincronizzazione...');
-        
-        // Carica dati locali
-        const localData = this.loadFromLocal();
-        const hasLocalData = localData.peppers && localData.peppers.length > 0;
-        
+    
+    /**
+     * Load from local storage
+     */
+    loadFromLocal() {
         try {
-            // Prova a caricare dal cloud
-            const cloudData = await this.loadFromCloud();
-            const hasCloudData = cloudData.peppers && cloudData.peppers.length > 0;
-            
-            // Se non ci sono dati locali ma ci sono dati cloud, usa il cloud
-            if (!hasLocalData && hasCloudData) {
-                console.log('☁️ Primo accesso: caricamento dati dal cloud');
-                this.saveToLocal(cloudData);
-                console.log('✅ Sincronizzazione completata');
-                return cloudData;
-            }
-            
-            // Se non ci sono dati cloud ma ci sono dati locali, usa i dati locali
-            if (hasLocalData && !hasCloudData) {
-                console.log('📱 Primo upload: caricamento dati locali sul cloud');
-                await this.saveToCloud(localData);
-                console.log('✅ Sincronizzazione completata');
-                return localData;
-            }
-            
-            // Se entrambi hanno dati, confronta le date
-            if (hasLocalData && hasCloudData) {
-                const localDate = new Date(localData.lastUpdate || 0);
-                const cloudDate = new Date(cloudData.lastUpdate || 0);
-                
-                let finalData;
-                if (cloudDate > localDate) {
-                    console.log('☁️ Dati cloud più recenti, aggiornamento locale');
-                    finalData = cloudData;
-                    this.saveToLocal(finalData);
-                } else if (localDate > cloudDate) {
-                    console.log('📱 Dati locali più recenti, aggiornamento cloud');
-                    finalData = localData;
-                    await this.saveToCloud(finalData);
-                } else {
-                    console.log('⚖️ Dati sincronizzati');
-                    finalData = localData;
-                }
-                
-                console.log('✅ Sincronizzazione completata');
-                return finalData;
-            }
-            
-            // Se nessuno ha dati, crea dataset vuoto
-            console.log('🆕 Nessun dato disponibile, creazione dataset vuoto');
-            const emptyData = { peppers: [], lastUpdate: new Date().toISOString() };
-            this.saveToLocal(emptyData);
-            console.log('✅ Sincronizzazione completata');
-            return emptyData;
-            
+            const data = localStorage.getItem('pepperTracker');
+            return data ? JSON.parse(data) : {};
         } catch (error) {
-            console.error('❌ Errore sincronizzazione, uso dati locali');
-            return localData;
+            console.error('❌ Local storage load error:', error);
+            return {};
         }
     }
-
-    // Salva dati e sincronizza
-    async saveData(data) {
-        // Aggiorna timestamp
-        data.lastUpdate = new Date().toISOString();
+    
+    /**
+     * Save data to GitHub (all files)
+     */
+    async saveToCloud(data) {
+        console.log('☁️ Saving to GitHub...');
         
-        // Salva localmente
+        const results = await Promise.allSettled([
+            this.saveFileToGitHub(this.dataFiles.peppers, data.peppers || []),
+            this.saveFileToGitHub(this.dataFiles.diaryEntries, data.diaryEntries || []),
+            this.saveFileToGitHub(this.dataFiles.quickNotes, data.quickNotes || ''),
+            this.saveFileToGitHub(this.dataFiles.trackerData, data.trackerData || []),
+            this.saveFileToGitHub(this.dataFiles.genealogy, data.genealogy || {})
+        ]);
+        
+        const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+        const total = results.length;
+        
+        console.log(`✅ GitHub sync: ${successful}/${total} files saved`);
+        
+        if (successful > 0) {
+            console.log('✅ Data saved to GitHub');
+            return true;
+        } else {
+            throw new Error('Failed to save any files to GitHub');
+        }
+    }
+    
+    /**
+     * Load data from GitHub (all files)
+     */
+    async loadFromCloud() {
+        console.log('📡 Loading from GitHub...');
+        
+        const results = await Promise.allSettled([
+            this.loadFileFromGitHub(this.dataFiles.peppers),
+            this.loadFileFromGitHub(this.dataFiles.diaryEntries),
+            this.loadFileFromGitHub(this.dataFiles.quickNotes),
+            this.loadFileFromGitHub(this.dataFiles.trackerData),
+            this.loadFileFromGitHub(this.dataFiles.genealogy)
+        ]);
+        
+        const data = {
+            peppers: results[0].status === 'fulfilled' ? results[0].value || [] : [],
+            diaryEntries: results[1].status === 'fulfilled' ? results[1].value || [] : [],
+            quickNotes: results[2].status === 'fulfilled' ? results[2].value || '' : '',
+            trackerData: results[3].status === 'fulfilled' ? results[3].value || [] : [],
+            genealogy: results[4].status === 'fulfilled' ? results[4].value || {} : {},
+            lastUpdate: new Date().toISOString()
+        };
+        
+        const loadedFiles = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
+        console.log(`📡 GitHub load: ${loadedFiles}/${results.length} files loaded`);
+        
+        return data;
+    }
+    
+    /**
+     * Main save method
+     */
+    async saveData(data) {
+        // Always save locally first
         this.saveToLocal(data);
         
-        // Prova a salvare sul cloud
+        // Try to save to GitHub
         try {
             await this.saveToCloud(data);
         } catch (error) {
-            console.warn('⚠️ Errore sync cloud, dati salvati localmente');
+            console.error('❌ GitHub save failed, data saved locally only');
         }
     }
-
-    // Forza sincronizzazione
-    async forceSync() {
-        return await this.sync();
-    }
-
-    // Testa la connessione
-    async testConnection() {
+    
+    /**
+     * Main load method
+     */
+    async loadData() {
         try {
-            await this.loadFromCloud();
-            return true;
+            // Try to load from GitHub first
+            const cloudData = await this.loadFromCloud();
+            
+            // If successful, save locally and return
+            if (cloudData && Object.keys(cloudData).length > 1) {
+                this.saveToLocal(cloudData);
+                return cloudData;
+            }
         } catch (error) {
-            return false;
+            console.error('❌ GitHub load failed, using local data');
         }
+        
+        // Fallback to local data
+        return this.loadFromLocal();
+    }
+}
+
+// Compatibility class for existing code
+class DatabaseSync extends GitHubSync {
+    constructor() {
+        super();
+        console.log('🔄 DatabaseSync initialized with GitHub backend');
     }
 }

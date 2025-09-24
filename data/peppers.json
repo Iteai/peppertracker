@@ -1,0 +1,57 @@
+{
+  "peppers": [
+    {
+      "id": 4,
+      "name": "Arlecchino",
+      "species": "Capsicum annuum",
+      "dateAdded": "2025-09-23",
+      "stage": "fruttificazione",
+      "height": 20,
+      "light": 20,
+      "waterType": "rubinetto",
+      "fertilizers": [
+        "NPK 7-5-5"
+      ],
+      "fertilizerAmount": 2
+    },
+    {
+      "id": 3,
+      "name": "Lanterna Rossa F",
+      "species": "Capsicum annuum",
+      "dateAdded": "2025-09-09",
+      "stage": "germinazione",
+      "height": 1,
+      "light": 20,
+      "waterType": "rubinetto",
+      "fertilizers": [],
+      "fertilizerAmount": null
+    },
+    {
+      "id": 2,
+      "name": "Cayenne - training",
+      "species": "Capsicum annuum",
+      "dateAdded": "2025-07-14",
+      "stage": "crescita",
+      "height": 15,
+      "light": 20,
+      "waterType": "rubinetto",
+      "fertilizers": [
+        "NPK 7-5-5"
+      ],
+      "fertilizerAmount": 2
+    },
+    {
+      "id": 1,
+      "name": "Jalapeno M",
+      "species": "Capsicum annuum",
+      "dateAdded": "2025-09-09",
+      "stage": "germinazione",
+      "height": 1,
+      "light": 20,
+      "waterType": "rubinetto",
+      "fertilizers": [],
+      "fertilizerAmount": 0
+    }
+  ],
+  "lastUpdate": "2025-09-23T15:28:20.935Z"
+}
