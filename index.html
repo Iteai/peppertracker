@@ -98,13 +98,13 @@
             </div>
             <form id="pepperForm">
                 <div class="form-group">
-                    <label for="pepperName">Nome:</label>
-                    <input type="text" id="pepperName" name="pepperName" required>
+                    <label for="name">Nome:</label>
+                    <input type="text" id="name" name="name" required>
                 </div>
 
                 <div class="form-group">
-                    <label for="pepperSpecies">Specie:</label>
-                    <select id="pepperSpecies" name="pepperSpecies" required>
+                    <label for="species">Specie:</label>
+                    <select id="species" name="species">
                         <option value="">Seleziona specie</option>
                         <option value="Capsicum annuum">Capsicum annuum</option>
                         <option value="Capsicum chinense">Capsicum chinense</option>
@@ -115,34 +115,32 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="pepperDate">Data:</label>
-                    <input type="date" id="pepperDate" name="pepperDate" required>
+                    <label for="date">Data:</label>
+                    <input type="date" id="date" name="date">
                 </div>
 
                 <div class="form-group">
-                    <label for="plantStage">Stato della Pianta:</label>
-                    <select id="plantStage" name="plantStage" required>
+                    <label for="stage">Stato della Pianta:</label>
+                    <select id="stage" name="stage">
                         <option value="semina">Semina</option>
                         <option value="germinazione">Germinazione</option>
                         <option value="crescita">Crescita</option>
                         <option value="fioritura">Fioritura</option>
                         <option value="fruttificazione">Fruttificazione</option>
                         <option value="raccolta">Raccolta</option>
-                        <option value="raccoltasemi">Raccolta Semi</option>
+                        <option value="raccolta-semi">Raccolta Semi</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="plantHeight">Altezza (cm):</label>
-                    <input type="number" id="plantHeight" name="plantHeight" min="0" step="0.1">
+                    <label for="height">Altezza (cm):</label>
+                    <input type="number" id="height" name="height">
                 </div>
 
                 <div class="form-group">
                     <label for="lightIntensity">Intensità Luce (%):</label>
-                    <div class="slider-container">
-                        <input type="range" id="lightIntensity" name="lightIntensity" min="0" max="100" value="50" class="slider">
-                        <span id="lightValue" class="slider-value">50%</span>
-                    </div>
+                    <input type="range" id="lightIntensity" name="light" min="0" max="100" value="50">
+                    <span id="lightValue">50%</span>
                 </div>
 
                 <div class="form-group">
@@ -156,22 +154,21 @@
                 <div class="form-group">
                     <label>Fertilizzanti:</label>
                     <div class="checkbox-group">
-                        <label><input type="checkbox" name="fertilizer" value="PK Booster"> PK Booster</label>
-                        <label><input type="checkbox" name="fertilizer" value="CalMag"> CalMag</label>
-                        <label><input type="checkbox" name="fertilizer" value="NPK 7-5-5"> NPK 7-5-5</label>
+                        <label><input type="checkbox" name="fertilizers" value="PK Booster"> PK Booster</label>
+                        <label><input type="checkbox" name="fertilizers" value="CalMag"> CalMag</label>
+                        <label><input type="checkbox" name="fertilizers" value="NPK 7-5-5"> NPK 7-5-5</label>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="fertilizerAmount">Quantità Fertilizzante (ml/L):</label>
-                    <input type="number" id="fertilizerAmount" name="fertilizerAmount" min="0" step="0.1">
+                    <input type="number" id="fertilizerAmount" name="fertilizerAmount" step="0.1">
                 </div>
 
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Salva</button>
-                    <button type="button" id="cancelBtn" class="btn btn-secondary">Annulla</button>
-                </div>
+                <button type="submit">Salva</button>
+                <button type="button" id="cancelBtn">Annulla</button>
             </form>
+
         </div>
     </div>
 
