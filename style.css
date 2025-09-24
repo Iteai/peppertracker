@@ -2598,3 +2598,100 @@ tr:hover {
         transform: none;
     }
 }
+
+/* Error banner */
+.error-banner {
+    background: linear-gradient(135deg, #d9534f 0%, #c9302c 100%);
+    color: white;
+    padding: 12px 20px;
+    margin: 10px 0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.error-banner i {
+    font-size: 18px;
+}
+
+.error-banner .btn-sm {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* Status indicators */
+.status.connected {
+    color: #5cb85c;
+}
+
+.status.disconnected {
+    color: #d9534f;
+}
+
+/* Recent items */
+.no-recent {
+    text-align: center;
+    padding: 30px;
+    color: #888;
+}
+
+.recent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: #333;
+}
+
+.recent-info h4 {
+    margin: 0 0 4px 0;
+    color: var(--accent-color);
+}
+
+.recent-info p {
+    margin: 0;
+    color: #ccc;
+    font-size: 14px;
+}
+
+.hybrid-badge {
+    background: #5cb85c;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+
+.recent-meta {
+    text-align: right;
+    font-size: 12px;
+    color: #888;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid #444;
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-item i {
+    width: 16px;
+    text-align: center;
+    color: var(--accent-color);
+}

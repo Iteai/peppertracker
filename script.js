@@ -1,36 +1,95 @@
+// Main application script with GitHub sync
+let peppers = [];
+let dbSync;
+
+// Initialize database with GitHub sync
 async function initDatabase() {
     try {
         console.log('🔄 Inizializzazione database...');
         
-        // Prima carica dai dati locali se esistono
-        const localData = dbSync.loadFromLocal();
-        peppers = localData.peppers || [];
+        dbSync = new GitHubSync();
         
-        // Poi prova a sincronizzare con il cloud
-        const data = await dbSync.sync();
+        // Load data from GitHub with local fallback
+        const data = await dbSync.loadData();
         peppers = data.peppers || [];
         
-        console.log('✅ Database inizializzato con', peppers.length, 'peperoncini');
+        console.log('✅ Database inizializzato con GitHub:', peppers.length, 'peperoncini');
         
-        // Aggiorna solo la tabella, il grafico sarà aggiornato dopo initChart
+        // Update displays
         renderTable();
+        updateStats();
+        initChart();
+        
+        return data;
         
     } catch (error) {
         console.error('❌ Errore inizializzazione database:', error);
-        // Fallback ai dati locali
-        const localData = dbSync.loadFromLocal();
+        
+        // Fallback to local data only
+        const localData = dbSync?.loadFromLocal() || {};
         peppers = localData.peppers || [];
+        
         renderTable();
+        updateStats();
+        initChart();
+        
+        return localData;
     }
 }
 
-// Gestione errori globale
+// Test GitHub connection
+async function testConnection() {
+    try {
+        console.log('🧪 Testing GitHub connection...');
+        
+        // Test by trying to load data
+        const testData = await dbSync.loadData();
+        
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+            statusElement.innerHTML = '✅ GitHub connesso';
+            statusElement.className = 'status connected';
+        }
+        
+        console.log('✅ GitHub connection successful');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ GitHub connection failed:', error);
+        
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+            statusElement.innerHTML = '❌ GitHub offline';
+            statusElement.className = 'status disconnected';
+        }
+        
+        return false;
+    }
+}
+
+// Save data with GitHub sync
+async function saveData() {
+    try {
+        const currentData = dbSync.loadFromLocal();
+        await dbSync.saveData({
+            ...currentData,
+            peppers: peppers,
+            lastUpdate: new Date().toISOString()
+        });
+        
+        console.log('✅ Data saved to GitHub');
+        updateStats();
+        
+    } catch (error) {
+        console.error('❌ Error saving to GitHub:', error);
+        throw error;
+    }
+}
+
+// Global error handling
 window.addEventListener('error', function(e) {
     console.error('Errore globale:', e.error);
 });
-
-// Sample data for peppers (in a real app, this would come from a database)
-let peppers = [];
 
 // DOM Elements
 const hamburgerMenu = document.getElementById('hamburgerMenu');
@@ -54,11 +113,10 @@ let plantChart;
 const chartType = document.getElementById('chartType');
 const timeRange = document.getElementById('timeRange');
 
-// Initialize database sync
-let dbSync;
-
 // Sidebar functionality
 function initSidebar() {
+    if (!hamburgerMenu || !sidebar) return;
+    
     hamburgerMenu.addEventListener('click', function() {
         sidebar.classList.add('active');
         overlay.classList.add('active');
@@ -66,8 +124,8 @@ function initSidebar() {
         hamburgerMenu.style.display = 'none';
     });
 
-    closeBtn.addEventListener('click', closeSidebar);
-    overlay.addEventListener('click', closeSidebar);
+    closeBtn?.addEventListener('click', closeSidebar);
+    overlay?.addEventListener('click', closeSidebar);
 
     function closeSidebar() {
         sidebar.classList.remove('active');
@@ -79,429 +137,407 @@ function initSidebar() {
 
 // Table functionality
 function initTable() {
-    addPepperBtn.addEventListener('click', function() {
-        openModal();
-    });
-
-    searchInput.addEventListener('input', function() {
-        filterTable(this.value);
-    });
+    if (addPepperBtn) {
+        addPepperBtn.addEventListener('click', function() {
+            openModal();
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            filterTable(this.value);
+        });
+    }
 }
 
+// Render peppers table
 function renderTable() {
     const tableBody = document.getElementById('peppersTableBody');
+    if (!tableBody) return;
+    
     tableBody.innerHTML = '';
-
+    
     peppers.forEach(pepper => {
         const row = document.createElement('tr');
         
         // Create action buttons
-        const editBtn = `<button onclick="editPepper(${pepper.id})" class="btn-icon" title="Modifica"><i class="fas fa-edit"></i></button>`;
-        const deleteBtn = `<button onclick="deletePepper(${pepper.id})" class="btn-icon btn-danger" title="Elimina"><i class="fas fa-trash"></i></button>`;
+        const editBtn = `<button onclick="editPepper(${pepper.id})" class="btn-icon" title="Modifica">
+            <i class="fas fa-edit"></i>
+        </button>`;
         
+        const deleteBtn = `<button onclick="deletePepper(${pepper.id})" class="btn-icon btn-danger" title="Elimina">
+            <i class="fas fa-trash"></i>
+        </button>`;
+
         row.innerHTML = `
-            <td>${pepper.name}</td>
-            <td>${pepper.species}</td>
-            <td>${new Date(pepper.dateAdded).toLocaleDateString()}</td>
-            <td><span class="status-badge status-${pepper.stage}">${pepper.stage}</span></td>
-            <td class="actions">${editBtn}${deleteBtn}</td>
+            <td class="pepper-name">${pepper.name}</td>
+            <td class="pepper-type">${pepper.type || '-'}</td>
+            <td class="pepper-origin">${pepper.origin || '-'}</td>
+            <td class="pepper-scoville">${pepper.scoville ? pepper.scoville.toLocaleString() + ' SHU' : '-'}</td>
+            <td class="pepper-actions">
+                ${editBtn}
+                ${deleteBtn}
+            </td>
         `;
         
         tableBody.appendChild(row);
     });
+    
+    updateStats();
 }
 
+// Filter table
 function filterTable(searchTerm) {
-    const rows = peppersTableBody.getElementsByTagName('tr');
+    const tableBody = document.getElementById('peppersTableBody');
+    if (!tableBody) return;
     
-    for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const name = row.cells[0].textContent.toLowerCase();
-        const species = row.cells[1].textContent.toLowerCase();
+    const rows = tableBody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const isVisible = text.includes(searchTerm.toLowerCase());
+        row.style.display = isVisible ? '' : 'none';
+    });
+}
+
+// Modal functionality
+function openModal(pepper = null) {
+    const modal = document.getElementById('pepperModal');
+    const form = document.getElementById('pepperForm');
+    const title = document.getElementById('modalTitle');
+    
+    if (!modal || !form) return;
+    
+    if (pepper) {
+        // Edit mode
+        title.textContent = 'Modifica Peperoncino';
+        form.dataset.editId = pepper.id;
         
-        if (name.includes(searchTerm.toLowerCase()) || species.includes(searchTerm.toLowerCase())) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+        // Populate form
+        document.getElementById('pepperName').value = pepper.name || '';
+        document.getElementById('pepperType').value = pepper.type || '';
+        document.getElementById('pepperOrigin').value = pepper.origin || '';
+        document.getElementById('pepperScoville').value = pepper.scoville || '';
+        document.getElementById('pepperDescription').value = pepper.description || '';
+        
+    } else {
+        // Add mode
+        title.textContent = 'Aggiungi Peperoncino';
+        form.removeAttribute('data-edit-id');
+        form.reset();
+    }
+    
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModalFunction() {
+    const modal = document.getElementById('pepperModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
     }
 }
 
-// Chart functionality
+// Edit pepper
+function editPepper(id) {
+    const pepper = peppers.find(p => p.id === id);
+    if (pepper) {
+        openModal(pepper);
+    }
+}
+
+// Delete pepper
+async function deletePepper(id) {
+    if (!confirm('🗑️ Sei sicuro di voler eliminare questo peperoncino?')) {
+        return;
+    }
+    
+    const originalPeppers = [...peppers];
+    peppers = peppers.filter(p => p.id !== id);
+    
+    try {
+        await saveData();
+        renderTable();
+        console.log('✅ Pepper deleted');
+    } catch (error) {
+        // Restore on error
+        peppers = originalPeppers;
+        renderTable();
+        alert('❌ Errore durante l\'eliminazione. Riprova.');
+    }
+}
+
+// Form submission
+async function handleFormSubmit(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const editId = e.target.dataset.editId;
+    
+    const pepperData = {
+        id: editId ? parseInt(editId) : Date.now(),
+        name: formData.get('pepperName').trim(),
+        type: formData.get('pepperType').trim(),
+        origin: formData.get('pepperOrigin').trim(),
+        scoville: formData.get('pepperScoville') ? parseInt(formData.get('pepperScoville')) : null,
+        description: formData.get('pepperDescription').trim(),
+        dateAdded: editId ? 
+            peppers.find(p => p.id == editId)?.dateAdded || new Date().toISOString() : 
+            new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        isHybrid: false,
+        varieties: [],
+        crossings: []
+    };
+    
+    if (!pepperData.name) {
+        alert('⚠️ Nome del peperoncino richiesto!');
+        return;
+    }
+    
+    try {
+        if (editId) {
+            // Update existing
+            const index = peppers.findIndex(p => p.id == editId);
+            if (index !== -1) {
+                peppers[index] = pepperData;
+            }
+        } else {
+            // Add new
+            peppers.unshift(pepperData);
+        }
+        
+        await saveData();
+        renderTable();
+        closeModalFunction();
+        
+        console.log('✅ Pepper saved:', pepperData.name);
+        
+    } catch (error) {
+        alert('❌ Errore durante il salvataggio. Riprova.');
+        console.error('Save error:', error);
+    }
+}
+
+// Update statistics
+function updateStats() {
+    // Total peppers
+    const totalElement = document.getElementById('totalPeppers');
+    if (totalElement) {
+        totalElement.textContent = peppers.length;
+    }
+    
+    // Unique types
+    const typesElement = document.getElementById('totalVarieties');
+    if (typesElement) {
+        const types = new Set(peppers.filter(p => p.type).map(p => p.type));
+        typesElement.textContent = types.size;
+    }
+    
+    // Hybrids count
+    const hybridsElement = document.getElementById('hybridCount');
+    if (hybridsElement) {
+        const hybrids = peppers.filter(p => p.isHybrid).length;
+        hybridsElement.textContent = hybrids;
+    }
+    
+    // Last update
+    const lastUpdateElement = document.getElementById('lastUpdate');
+    if (lastUpdateElement) {
+        const localData = dbSync?.loadFromLocal() || {};
+        if (localData.lastUpdate) {
+            const date = new Date(localData.lastUpdate);
+            lastUpdateElement.textContent = date.toLocaleDateString('it-IT');
+        } else {
+            lastUpdateElement.textContent = 'Mai';
+        }
+    }
+    
+    // Recent peppers
+    showRecentPeppers();
+    
+    // System status
+    showSystemStatus();
+}
+
+// Show recent peppers
+function showRecentPeppers() {
+    const recentElement = document.getElementById('recentPeppers');
+    if (!recentElement) return;
+    
+    const recent = [...peppers]
+        .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded))
+        .slice(0, 5);
+    
+    if (recent.length === 0) {
+        recentElement.innerHTML = `
+            <div class="no-recent">
+                <i class="fas fa-pepper-hot"></i>
+                <p>Nessun peperoncino ancora aggiunto</p>
+                <button onclick="window.location.href='database.html'" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Aggiungi il primo
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    recentElement.innerHTML = recent.map(pepper => `
+        <div class="recent-item">
+            <div class="recent-info">
+                <h4>${pepper.name}</h4>
+                <p>${pepper.type || 'Tipo non specificato'}</p>
+                ${pepper.isHybrid ? '<span class="hybrid-badge">Ibrido</span>' : ''}
+            </div>
+            <div class="recent-meta">
+                <span class="date">${new Date(pepper.dateAdded).toLocaleDateString('it-IT')}</span>
+                ${pepper.scoville ? `<span class="scoville">${pepper.scoville.toLocaleString()} SHU</span>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Show system status
+function showSystemStatus() {
+    const statusElement = document.getElementById('systemStatus');
+    if (!statusElement) return;
+    
+    const localData = dbSync?.loadFromLocal() || {};
+    const hasLocal = Object.keys(localData).length > 0;
+    
+    statusElement.innerHTML = `
+        <div class="status-item">
+            <i class="fas fa-database"></i>
+            <span>Locale: ${hasLocal ? '✅ OK' : '❌ Vuoto'}</span>
+        </div>
+        <div class="status-item">
+            <i class="fab fa-github"></i>
+            <span id="connectionStatus">GitHub: 🔄 Test...</span>
+        </div>
+        <div class="status-item">
+            <i class="fas fa-clock"></i>
+            <span>Sync: ${localData.lastUpdate ? 
+                new Date(localData.lastUpdate).toLocaleString('it-IT') : 'Mai'}</span>
+        </div>
+    `;
+    
+    // Test connection
+    testConnection();
+}
+
+// Initialize chart
 function initChart() {
-    const ctx = document.getElementById('plantChart').getContext('2d');
-
-    // Update light value display
-    lightIntensity.addEventListener('input', function() {
-        lightValue.textContent = this.value + '%';
+    const chartCanvas = document.getElementById('plantChart');
+    if (!chartCanvas) return;
+    
+    // Destroy existing chart
+    if (plantChart) {
+        plantChart.destroy();
+    }
+    
+    const ctx = chartCanvas.getContext('2d');
+    
+    // Prepare data
+    const typeData = {};
+    peppers.forEach(pepper => {
+        const type = pepper.type || 'Non specificato';
+        typeData[type] = (typeData[type] || 0) + 1;
     });
-
-    // Create initial chart
+    
     plantChart = new Chart(ctx, {
-        type: 'line',
+        type: 'doughnut',
         data: {
-            labels: peppers.map(p => p.name),
+            labels: Object.keys(typeData),
             datasets: [{
-                label: 'Altezza (cm)',
-                data: peppers.map(p => p.height),
-                borderColor: '#d9534f',
-                backgroundColor: 'rgba(217, 83, 79, 0.1)',
-                tension: 0.1,
-                fill: true
+                data: Object.values(typeData),
+                backgroundColor: [
+                    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
+                    '#ffeaa7', '#dda0dd', '#98d8c8', '#f7dc6f'
+                ],
+                borderWidth: 2,
+                borderColor: '#2c2c2c'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: '#ccc'
-                    }
-                },
-                x: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: '#ccc'
-                    }
-                }
-            },
             plugins: {
                 legend: {
+                    position: 'bottom',
                     labels: {
-                        color: '#ccc'
+                        color: '#e0e0e0',
+                        padding: 15
                     }
                 }
             }
         }
     });
-
-    // Add event listeners to chart controls
-    chartType.addEventListener('change', updateChart);
-    timeRange.addEventListener('change', updateChart);
-    
-    // Ora aggiorna il grafico con i dati attuali
-    updateChart();
 }
 
-function updateChart() {
-    // Controllo di sicurezza: se il grafico non è ancora inizializzato, esci
-    if (!plantChart) {
-        console.log('⏳ Grafico non ancora inizializzato, salto aggiornamento');
-        return;
-    }
-
-    const type = chartType.value;
-    const range = timeRange.value;
-
-    let labels = peppers.map(p => p.name);
-    let data;
-    let label;
-    let backgroundColor;
-
-    switch(type) {
-        case 'height':
-            data = peppers.map(p => p.height);
-            label = 'Altezza (cm)';
-            backgroundColor = 'rgba(217, 83, 79, 0.1)';
-            break;
-        case 'stage':
-            // Convert stages to numerical values for charting
-            const stageValues = {
-                'semina': 1, 'germinazione': 2, 'crescita': 3, 'fioritura': 4,
-                'fruttificazione': 5, 'raccolta': 6, 'raccoltasemi': 7
-            };
-            data = peppers.map(p => stageValues[p.stage]);
-            label = 'Stato della Pianta';
-            backgroundColor = 'rgba(92, 184, 92, 0.1)';
-            break;
-        case 'light':
-            data = peppers.map(p => p.light);
-            label = 'Intensità Luce (%)';
-            backgroundColor = 'rgba(240, 173, 78, 0.1)';
-            break;
-        case 'nutrients':
-            // Use fertilizer amount as data
-            data = peppers.map(p => p.fertilizerAmount);
-            label = 'Quantità Fertilizzante (ml/L)';
-            backgroundColor = 'rgba(91, 192, 222, 0.1)';
-            break;
-    }
-
-    // Apply time range filter if needed
-    if (range !== 'all') {
-        const now = new Date();
-        let cutoffDate = new Date();
-        if (range === 'week') {
-            cutoffDate.setDate(now.getDate() - 7);
-        } else if (range === 'month') {
-            cutoffDate.setMonth(now.getMonth() - 1);
-        }
-
-        const filteredData = [];
-        const filteredLabels = [];
-        peppers.forEach((pepper, index) => {
-            const pepperDate = new Date(pepper.dateAdded);
-            if (pepperDate >= cutoffDate) {
-                filteredData.push(data[index]);
-                filteredLabels.push(labels[index]);
-            }
-        });
-        data = filteredData;
-        labels = filteredLabels;
-    }
-
-    // Update chart
-    plantChart.data.labels = labels;
-    plantChart.data.datasets[0].data = data;
-    plantChart.data.datasets[0].label = label;
-    plantChart.data.datasets[0].backgroundColor = backgroundColor;
-
-    // Change border color based on data type for visual distinction
-    switch(type) {
-        case 'height':
-            plantChart.data.datasets[0].borderColor = '#d9534f';
-            break;
-        case 'stage':
-            plantChart.data.datasets[0].borderColor = '#5cb85c';
-            break;
-        case 'light':
-            plantChart.data.datasets[0].borderColor = '#f0ad4e';
-            break;
-        case 'nutrients':
-            plantChart.data.datasets[0].borderColor = '#5bc0de';
-            break;
-    }
-
-    plantChart.update();
-}
-
-// Modal functionality
-function initModal() {
-    closeModal.addEventListener('click', closeModalFunc);
-    cancelBtn.addEventListener('click', closeModalFunc);
-    
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        if (event.target === pepperModal) {
-            closeModalFunc();
-        }
-    });
-
-    // Set today's date as default
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('pepperDate').value = today;
-}
-
-function openModal(pepperId = null) {
-    if (pepperId) {
-        // Editing existing pepper
-        const pepper = peppers.find(p => p.id === pepperId);
-        if (pepper) {
-            modalTitle.textContent = 'Modifica Peperoncino';
-            populateForm(pepper);
-            pepperForm.setAttribute('data-id', pepperId);
-        }
-    } else {
-        // Adding new pepper
-        modalTitle.textContent = 'Aggiungi Nuovo Peperoncino';
-        pepperForm.reset();
-        pepperForm.removeAttribute('data-id');
-        // Set today's date as default
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('pepperDate').value = today;
-        lightValue.textContent = '50%';
-    }
-    
-    pepperModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-
-function closeModalFunc() {
-    pepperModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    pepperForm.reset();
-    pepperForm.removeAttribute('data-id');
-}
-
-function populateForm(pepper) {
-    document.getElementById('pepperName').value = pepper.name;
-    document.getElementById('pepperSpecies').value = pepper.species;
-    document.getElementById('pepperDate').value = pepper.dateAdded;
-    document.getElementById('plantStage').value = pepper.stage;
-    document.getElementById('plantHeight').value = pepper.height;
-    document.getElementById('lightIntensity').value = pepper.light;
-    lightValue.textContent = pepper.light + '%';
-    document.getElementById('waterType').value = pepper.waterType || 'rubinetto';
-    document.getElementById('fertilizerAmount').value = pepper.fertilizerAmount || 0;
-    
-    // Set fertilizers checkboxes
-    const fertilizerCheckboxes = document.querySelectorAll('input[name="fertilizer"]');
-    fertilizerCheckboxes.forEach(checkbox => {
-        checkbox.checked = pepper.fertilizers && pepper.fertilizers.includes(checkbox.value);
-    });
-}
-
-// Event Listeners
-function initEventListeners() {
-    pepperForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        savePepper();
-    });
-}
-
-function savePepper() {
-    const name = document.getElementById('pepperName').value;
-    const species = document.getElementById('pepperSpecies').value;
-    const dateAdded = document.getElementById('pepperDate').value;
-    const stage = document.getElementById('plantStage').value;
-    const height = parseFloat(document.getElementById('plantHeight').value);
-    const light = parseInt(document.getElementById('lightIntensity').value);
-    const waterType = document.getElementById('waterType').value;
-    const fertilizerAmount = parseFloat(document.getElementById('fertilizerAmount').value);
-
-    // Get selected fertilizers
-    const fertilizers = [];
-    document.querySelectorAll('input[name="fertilizer"]:checked').forEach(checkbox => {
-        fertilizers.push(checkbox.value);
-    });
-
-    const pepperId = pepperForm.getAttribute('data-id');
-    
-    if (pepperId) {
-        // Update existing pepper
-        const index = peppers.findIndex(p => p.id == parseInt(pepperId));
-        if (index !== -1) {
-            peppers[index] = {
-                ...peppers[index],
-                name,
-                species,
-                dateAdded,
-                stage,
-                height,
-                light,
-                waterType,
-                fertilizers,
-                fertilizerAmount
-            };
-        }
-    } else {
-        // Add new pepper
-        const newPepper = {
-            id: peppers.length > 0 ? Math.max(...peppers.map(p => p.id)) + 1 : 1,
-            name,
-            species,
-            dateAdded: dateAdded,
-            stage,
-            height,
-            light,
-            waterType,
-            fertilizers,
-            fertilizerAmount
-        };
-        peppers.unshift(newPepper); // Add to beginning of array
-    }
-
-    // Salva SOLO nel tracker (non toccare il database)
-    dbSync.saveData({
-        peppers: peppers,
-        lastUpdate: new Date().toISOString()
-    }).then(() => {
-        console.log('✅ Peperoncino tracker salvato');
-    }).catch(error => {
-        console.error('❌ Errore salvataggio tracker:', error);
-    });
-
-    // Update table and chart
-    renderTable();
-    updateChart();
-
-    // Close modal
-    closeModalFunc();
-}
-
-function editPepper(id) {
-    openModal(id);
-}
-
-function deletePepper(id) {
-    if (confirm('Sei sicuro di voler eliminare questo peperoncino?')) {
-        peppers = peppers.filter(p => p.id !== id);
-        
-        // Salva nel tracker
-        dbSync.saveData({
-            peppers: peppers,
-            lastUpdate: new Date().toISOString()
-        }).then(() => {
-            console.log('✅ Peperoncino tracker eliminato');
-        }).catch(error => {
-            console.error('❌ Errore eliminazione tracker:', error);
-        });
-        
-        renderTable();
-        updateChart();
-    }
-}
-
-function addSyncButton() {
-    const syncButton = document.createElement('button');
-    syncButton.id = 'syncButton';
-    syncButton.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizza';
-    syncButton.className = 'sync-btn';
-    
-    const tableControls = document.querySelector('.table-controls');
-    if (tableControls) {
-        tableControls.appendChild(syncButton);
-        
-        syncButton.addEventListener('click', async function() {
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizzando...';
-            
-            try {
-                console.log('🔄 Peppers prima del sync:', peppers.length);
-                const data = await dbSync.forceSync();
-                peppers = data.peppers || [];
-                console.log('🔄 Peppers dopo il sync:', peppers.length);
-                renderTable();
-                updateChart();
-            } catch (error) {
-                console.error('Errore sincronizzazione:', error);
-            } finally {
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-sync-alt"></i> Sincronizza';
-            }
-        });
-    }
-}
-
-// Initialize everything when DOM is loaded
-document.addEventListener('DOMContentLoaded', async function() {
+// Initialize app
+async function initApp() {
     try {
-        // Initialize database sync
-        dbSync = new DatabaseSync();
-        
         console.log('🚀 Avvio Pepper Tracker...');
-        await initDatabase();
+        
+        // Initialize components
         initSidebar();
         initTable();
-        initChart();
-        initModal();
-        initEventListeners();
-        addSyncButton();
         
-        const isConnected = await dbSync.testConnection();
-        if (isConnected) {
-            console.log('🌐 Connesso al cloud tracker');
-        } else {
-            console.warn('⚠️ Modalità offline - usando dati locali tracker');
+        // Setup form handler
+        const form = document.getElementById('pepperForm');
+        if (form) {
+            form.addEventListener('submit', handleFormSubmit);
         }
+        
+        // Setup modal close handlers
+        closeModal?.addEventListener('click', closeModalFunction);
+        cancelBtn?.addEventListener('click', closeModalFunction);
+        
+        // Setup light intensity slider
+        if (lightIntensity && lightValue) {
+            lightIntensity.addEventListener('input', function() {
+                lightValue.textContent = this.value + '%';
+            });
+        }
+        
+        // Load database
+        await initDatabase();
+        
+        console.log('✅ Pepper Tracker avviato con successo');
+        
     } catch (error) {
         console.error('❌ Errore avvio app tracker:', error);
+        
+        // Show error to user
+        const container = document.querySelector('.container');
+        if (container) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-banner';
+            errorDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Errore di inizializzazione: ${error.message}</span>
+                <button onclick="location.reload()" class="btn-sm">Riprova</button>
+            `;
+            container.prepend(errorDiv);
+        }
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initApp);
+
+// Close modal when clicking outside
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('pepperModal');
+    if (e.target === modal) {
+        closeModalFunction();
     }
 });
+
+// Export functions for global access
+window.initDatabase = initDatabase;
+window.testConnection = testConnection;
+window.saveData = saveData;
+window.editPepper = editPepper;
+window.deletePepper = deletePepper;
