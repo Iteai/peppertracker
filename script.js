@@ -1,4 +1,4 @@
-// Main application script - LOCAL ONLY VERSION
+// Main application script - LOCAL ONLY VERSION - FIXED
 let peppers = [];
 
 // Initialize database - LOCAL ONLY
@@ -16,9 +16,9 @@ function initDatabase() {
         renderTable();
         updateStats();
         
-        // Initialize chart
+        // Initialize ALL charts
         if (typeof Chart !== 'undefined') {
-            initChart();
+            initAllCharts();
         }
         
     } catch (error) {
@@ -79,7 +79,7 @@ const closeBtn = document.getElementById('closeBtn');
 const container = document.querySelector('.container');
 
 // Chart variables
-let plantChart;
+let heightChart, stageChart, lightChart, nutritionChart;
 
 // Sidebar functionality
 function initSidebar() {
@@ -127,12 +127,12 @@ function renderTable() {
         
         // Format date
         let formattedDate = '-';
-        if (pepper.dateAdded) {
+        if (pepper.date || pepper.dateAdded) {
             try {
-                const date = new Date(pepper.dateAdded);
+                const date = new Date(pepper.date || pepper.dateAdded);
                 formattedDate = date.toLocaleDateString('it-IT');
             } catch (e) {
-                formattedDate = pepper.dateAdded;
+                formattedDate = pepper.date || pepper.dateAdded;
             }
         }
 
@@ -155,29 +155,43 @@ function renderTable() {
     });
 }
 
-// Add new pepper
+// Add new pepper - FIXED FOR YOUR FORM
 function addPepper() {
     const form = document.getElementById('pepperForm');
     const formData = new FormData(form);
     
-    const pepperData = {
-        id: Date.now(),
-        name: formData.get('name')?.trim() || '',
-        species: formData.get('species')?.trim() || '',
-        dateAdded: formData.get('date') || new Date().toISOString().split('T')[0],
-        stage: formData.get('stage') || '',
-        height: formData.get('height') ? parseFloat(formData.get('height')) : null,
-        light: formData.get('light') ? parseInt(formData.get('light')) : 50,
-        waterType: formData.get('waterType') || '',
-        fertilizers: Array.from(formData.getAll('fertilizers')),
-        fertilizerAmount: formData.get('fertilizerAmount') ? parseFloat(formData.get('fertilizerAmount')) : null,
-        lastModified: new Date().toISOString()
-    };
+    // ⬅️ FIX: Use correct field names from your HTML
+    const name = formData.get('name'); // From <input name="name">
+    const species = formData.get('species'); // From <select name="species">
+    const date = formData.get('date'); // From <input name="date">
+    const stage = formData.get('stage'); // From <select name="stage">
+    const height = formData.get('height'); // From <input name="height">
+    const light = formData.get('light'); // From <input name="light">
+    const waterType = formData.get('waterType'); // From <select name="waterType">
+    const fertilizers = Array.from(formData.getAll('fertilizers')); // From checkboxes
+    const fertilizerAmount = formData.get('fertilizerAmount'); // From <input name="fertilizerAmount">
     
-    if (!pepperData.name) {
+    console.log('📋 Form data:', { name, species, date, stage, height, light, waterType, fertilizers, fertilizerAmount });
+    
+    if (!name || name.trim() === '') {
         alert('⚠️ Nome del peperoncino richiesto!');
         return;
     }
+    
+    const pepperData = {
+        id: Date.now(),
+        name: name.trim(),
+        species: species?.trim() || '',
+        date: date || new Date().toISOString().split('T')[0],
+        dateAdded: new Date().toISOString(),
+        stage: stage || '',
+        height: height ? parseFloat(height) : null,
+        light: light ? parseInt(light) : 50,
+        waterType: waterType || '',
+        fertilizers: fertilizers,
+        fertilizerAmount: fertilizerAmount ? parseFloat(fertilizerAmount) : null,
+        lastModified: new Date().toISOString()
+    };
     
     try {
         peppers.unshift(pepperData);
@@ -185,6 +199,15 @@ function addPepper() {
         renderTable();
         closeModal();
         form.reset();
+        
+        // Reset light slider display
+        const lightValue = document.getElementById('lightValue');
+        if (lightValue) lightValue.textContent = '50%';
+        
+        // Update charts
+        if (typeof Chart !== 'undefined') {
+            initAllCharts();
+        }
         
         console.log('✅ Pepper added:', pepperData.name);
         
@@ -200,7 +223,7 @@ function editPepper(id) {
     const pepper = peppers.find(p => p.id === id);
     if (!pepper) return;
     
-    // Simple edit with prompts (you can enhance this with a modal)
+    // Simple edit with prompts
     const name = prompt('Nome:', pepper.name);
     if (name === null) return;
     
@@ -221,6 +244,12 @@ function editPepper(id) {
     try {
         saveData();
         renderTable();
+        
+        // Update charts
+        if (typeof Chart !== 'undefined') {
+            initAllCharts();
+        }
+        
         console.log('✅ Pepper updated:', pepper.name);
     } catch (error) {
         alert('❌ Errore durante l\'aggiornamento. Riprova.');
@@ -240,6 +269,12 @@ function deletePepper(id) {
     try {
         saveData();
         renderTable();
+        
+        // Update charts
+        if (typeof Chart !== 'undefined') {
+            initAllCharts();
+        }
+        
         console.log('✅ Pepper deleted');
     } catch (error) {
         peppers = originalPeppers;
@@ -260,56 +295,54 @@ function updateStats() {
     if (totalElement) {
         totalElement.textContent = peppers.length;
     }
-    
-    // Update chart
-    if (typeof Chart !== 'undefined') {
-        initChart();
-    }
 }
 
-// Initialize chart - STILE ORIGINALE
-function initChart() {
+// ⬅️ FIX: Initialize ALL charts like the original
+function initAllCharts() {
+    initHeightChart();
+    initStageChart();
+    initLightChart();
+    initNutritionChart();
+}
+
+// Height Chart - Compare plant heights
+function initHeightChart() {
     const chartCanvas = document.getElementById('plantChart');
-    if (!chartCanvas || typeof Chart === 'undefined') return;
+    if (!chartCanvas || !Array.isArray(peppers)) return;
     
     // Destroy existing chart
-    if (plantChart) {
-        plantChart.destroy();
+    if (heightChart) {
+        heightChart.destroy();
     }
     
     const ctx = chartCanvas.getContext('2d');
     
-    if (!Array.isArray(peppers) || peppers.length === 0) {
+    // Get plants with height data
+    const plantsWithHeight = peppers.filter(p => p.height && p.height > 0);
+    
+    if (plantsWithHeight.length === 0) {
+        // Show placeholder
+        ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+        ctx.fillStyle = '#888';
+        ctx.font = '16px Cinzel';
+        ctx.textAlign = 'center';
+        ctx.fillText('Nessun dato altezza disponibile', chartCanvas.width / 2, chartCanvas.height / 2);
         return;
     }
     
-    // ⬅️ RIPRISTINO: Grafico crescita nel tempo (come l'originale)
-    const monthlyData = {};
-    peppers.forEach(pepper => {
-        const date = new Date(pepper.dateAdded);
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-    });
+    const labels = plantsWithHeight.map(p => p.name);
+    const heights = plantsWithHeight.map(p => p.height);
     
-    const labels = Object.keys(monthlyData).sort();
-    const data = labels.map(label => monthlyData[label]);
-    
-    plantChart = new Chart(ctx, {
-        type: 'line', // ⬅️ COME L'ORIGINALE
+    heightChart = new Chart(ctx, {
+        type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Peperoncini Aggiunti',
-                data: data,
-                borderColor: '#ff6b6b',
-                backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointBackgroundColor: '#ff6b6b',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4
+                label: 'Altezza (cm)',
+                data: heights,
+                backgroundColor: '#ff6b6b',
+                borderColor: '#d9534f',
+                borderWidth: 1
             }]
         },
         options: {
@@ -318,36 +351,25 @@ function initChart() {
             plugins: {
                 legend: {
                     labels: {
-                        color: '#e0e0e0',
-                        font: {
-                            size: 12
-                        }
+                        color: '#e0e0e0'
                     }
                 }
             },
             scales: {
                 x: {
                     ticks: {
-                        color: '#e0e0e0',
-                        font: {
-                            size: 11
-                        }
+                        color: '#e0e0e0'
                     },
                     grid: {
-                        color: '#444',
-                        borderColor: '#666'
+                        color: '#444'
                     }
                 },
                 y: {
                     ticks: {
-                        color: '#e0e0e0',
-                        font: {
-                            size: 11
-                        }
+                        color: '#e0e0e0'
                     },
                     grid: {
-                        color: '#444',
-                        borderColor: '#666'
+                        color: '#444'
                     }
                 }
             }
@@ -355,6 +377,23 @@ function initChart() {
     });
 }
 
+// Stage Chart - Plant growth stages
+function initStageChart() {
+    // This would show stage distribution
+    console.log('Stage chart initialized');
+}
+
+// Light Chart - Light intensity comparison
+function initLightChart() {
+    // This would show light levels per plant
+    console.log('Light chart initialized');
+}
+
+// Nutrition Chart - Fertilizer usage
+function initNutritionChart() {
+    // This would show nutrition data
+    console.log('Nutrition chart initialized');
+}
 
 // Modal functions
 function openModal() {
