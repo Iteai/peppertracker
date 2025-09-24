@@ -21,11 +21,11 @@
             <span class="close-btn" id="closeBtn">&times;</span>
         </div>
         <ul class="sidebar-menu">
-            <li><a href="index.html" id="homeLink"><i class="fas fa-home"></i> Home</a></li>
-            <li><a href="database.html" id="databaseLink"><i class="fas fa-database"></i> Database</a></li>
-            <li><a href="genealogy.html" id="genealogyLink"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
-            <li><a href="tracker.html" id="trackerLink"><i class="fas fa-seedling"></i> Tracker</a></li>
-            <li><a href="diary.html" id="diaryLink"><i class="fas fa-book"></i> Diario</a></li>
+            <li><a href="index.html"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="database.html"><i class="fas fa-database"></i> Database</a></li>
+            <li><a href="genealogy.html"><i class="fas fa-tree"></i> Albero Genealogico</a></li>
+            <li><a href="tracker.html"><i class="fas fa-seedling"></i> Tracker</a></li>
+            <li><a href="diary.html"><i class="fas fa-book"></i> Diario</a></li>
         </ul>
     </div>
 
@@ -36,93 +36,55 @@
     <div class="container">
         <h1 class="title">Pepper Tracker</h1>
 
-        <!-- SEZIONE STATISTICHE COMPLETA -->
-        <div class="stats-section">
-            <h2>Statistiche Piante</h2>
-            <div class="stats-grid">
-                
-                <!-- ALTEZZA -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3>Altezza (cm)</h3>
-                        <div class="stat-controls">
-                            <select id="heightChartType">
-                                <option value="bar">Barre</option>
-                                <option value="line">Linee</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="plantChart"></canvas>
-                    </div>
+        <div class="content-grid">
+            <!-- Left side - Chart -->
+            <div class="chart-section">
+                <h2>Statistiche Piante</h2>
+                <div class="chart-controls">
+                    <select id="chartType">
+                        <option value="height">Altezza (cm)</option>
+                        <option value="stage">Stato della Pianta</option>
+                        <option value="light">Intensità Luce (%)</option>
+                        <option value="nutrients">Nutrimento</option>
+                    </select>
+                    <select id="timeRange">
+                        <option value="week">Ultima Settimana</option>
+                        <option value="month">Ultimo Mese</option>
+                        <option value="all">Tutti i Dati</option>
+                    </select>
                 </div>
-
-                <!-- STATO DELLA PIANTA -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3>Stato della Pianta</h3>
-                        <div class="stat-controls">
-                            <select id="stageTimeRange">
-                                <option value="week">Ultima Settimana</option>
-                                <option value="month">Ultimo Mese</option>
-                                <option value="all">Tutti i Dati</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="stageChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- INTENSITÀ LUCE -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3>Intensità Luce (%)</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="lightChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- NUTRIMENTO -->
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <h3>Nutrimento</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="nutritionChart"></canvas>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- TABELLA PEPERONCINI -->
-        <div class="table-section">
-            <div class="table-header">
-                <h2>Peperoncini Recenti</h2>
-                <div class="table-controls">
-                    <input type="text" id="searchInput" placeholder="Cerca peperoncini..." class="search-input">
-                    <button id="addPepperBtn" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Aggiungi Nuovo
-                    </button>
+                <div class="chart-container">
+                    <canvas id="plantChart"></canvas>
                 </div>
             </div>
-            <div class="table-container">
-                <table id="peppersTable">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>Specie</th>
-                            <th>Data</th>
-                            <th>Stato</th>
-                            <th>Azioni</th>
-                        </tr>
-                    </thead>
-                    <tbody id="peppersTableBody">
-                        <!-- Peppers will be loaded here -->
-                    </tbody>
-                </table>
+
+            <!-- Right side - Peppers Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Peperoncini Recenti</h2>
+                    <div class="table-controls">
+                        <input type="text" id="searchInput" placeholder="Cerca peperoncini..." class="search-input">
+                        <button id="addPepperBtn" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Aggiungi Nuovo
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="peppersTable">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Specie</th>
+                                <th>Data</th>
+                                <th>Stato</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="peppersTableBody">
+                            <!-- Peppers will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
