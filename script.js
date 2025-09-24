@@ -1,4 +1,4 @@
-// Main application script with GitHub sync
+// Main application script with GitHub sync - ROBUST VERSION
 let peppers = [];
 let dbSync;
 
@@ -11,29 +11,39 @@ async function initDatabase() {
         
         // Load data from GitHub with local fallback
         const data = await dbSync.loadData();
-        peppers = data.peppers || [];
+        
+        // ⬅️ FIX: Ensure peppers is always an array
+        peppers = Array.isArray(data.peppers) ? data.peppers : [];
         
         console.log('✅ Database inizializzato con GitHub:', peppers.length, 'peperoncini');
         
-        // Update displays
-        renderTable();
+        // Update displays - with safety checks
+        safeRenderTable();
         updateStats();
-        initChart();
+        
+        // Initialize chart only if Chart.js is loaded
+        if (typeof Chart !== 'undefined') {
+            initChart();
+        }
         
         return data;
         
     } catch (error) {
         console.error('❌ Errore inizializzazione database:', error);
         
-        // Fallback to local data only
-        const localData = dbSync?.loadFromLocal() || {};
-        peppers = localData.peppers || [];
+        // ⬅️ FIX: Robust fallback
+        try {
+            const localData = dbSync?.loadFromLocal() || {};
+            peppers = Array.isArray(localData.peppers) ? localData.peppers : [];
+        } catch (localError) {
+            console.error('❌ Errore anche nel caricamento locale:', localError);
+            peppers = []; // Ultimate fallback
+        }
         
-        renderTable();
+        safeRenderTable();
         updateStats();
-        initChart();
         
-        return localData;
+        return { peppers: peppers };
     }
 }
 
@@ -42,8 +52,8 @@ async function testConnection() {
     try {
         console.log('🧪 Testing GitHub connection...');
         
-        // Test by trying to load data
-        const testData = await dbSync.loadData();
+        // Test by trying to load peppers only
+        const testResult = await dbSync.loadFileFromGitHub('data/peppers.json');
         
         const statusElement = document.getElementById('connectionStatus');
         if (statusElement) {
@@ -150,12 +160,32 @@ function initTable() {
     }
 }
 
+// ⬅️ FIX: Safe render table with array validation
+function safeRenderTable() {
+    try {
+        if (!Array.isArray(peppers)) {
+            console.warn('⚠️ Peppers is not an array, converting:', peppers);
+            peppers = [];
+        }
+        renderTable();
+    } catch (error) {
+        console.error('❌ Error in renderTable:', error);
+        peppers = [];
+        renderTable();
+    }
+}
+
 // Render peppers table
 function renderTable() {
     const tableBody = document.getElementById('peppersTableBody');
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
+    
+    // ⬅️ FIX: Safety check
+    if (!Array.isArray(peppers)) {
+        peppers = [];
+    }
     
     peppers.forEach(pepper => {
         const row = document.createElement('tr');
@@ -170,7 +200,7 @@ function renderTable() {
         </button>`;
 
         row.innerHTML = `
-            <td class="pepper-name">${pepper.name}</td>
+            <td class="pepper-name">${pepper.name || 'Senza nome'}</td>
             <td class="pepper-type">${pepper.type || '-'}</td>
             <td class="pepper-origin">${pepper.origin || '-'}</td>
             <td class="pepper-scoville">${pepper.scoville ? pepper.scoville.toLocaleString() + ' SHU' : '-'}</td>
@@ -258,12 +288,12 @@ async function deletePepper(id) {
     
     try {
         await saveData();
-        renderTable();
+        safeRenderTable();
         console.log('✅ Pepper deleted');
     } catch (error) {
         // Restore on error
         peppers = originalPeppers;
-        renderTable();
+        safeRenderTable();
         alert('❌ Errore durante l\'eliminazione. Riprova.');
     }
 }
@@ -297,6 +327,11 @@ async function handleFormSubmit(e) {
     }
     
     try {
+        // ⬅️ FIX: Ensure peppers is array
+        if (!Array.isArray(peppers)) {
+            peppers = [];
+        }
+        
         if (editId) {
             // Update existing
             const index = peppers.findIndex(p => p.id == editId);
@@ -309,7 +344,7 @@ async function handleFormSubmit(e) {
         }
         
         await saveData();
-        renderTable();
+        safeRenderTable();
         closeModalFunction();
         
         console.log('✅ Pepper saved:', pepperData.name);
@@ -322,6 +357,11 @@ async function handleFormSubmit(e) {
 
 // Update statistics
 function updateStats() {
+    // ⬅️ FIX: Safety checks
+    if (!Array.isArray(peppers)) {
+        peppers = [];
+    }
+    
     // Total peppers
     const totalElement = document.getElementById('totalPeppers');
     if (totalElement) {
@@ -366,6 +406,11 @@ function showRecentPeppers() {
     const recentElement = document.getElementById('recentPeppers');
     if (!recentElement) return;
     
+    // ⬅️ FIX: Safety check
+    if (!Array.isArray(peppers)) {
+        peppers = [];
+    }
+    
     const recent = [...peppers]
         .sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded))
         .slice(0, 5);
@@ -386,7 +431,7 @@ function showRecentPeppers() {
     recentElement.innerHTML = recent.map(pepper => `
         <div class="recent-item">
             <div class="recent-info">
-                <h4>${pepper.name}</h4>
+                <h4>${pepper.name || 'Senza nome'}</h4>
                 <p>${pepper.type || 'Tipo non specificato'}</p>
                 ${pepper.isHybrid ? '<span class="hybrid-badge">Ibrido</span>' : ''}
             </div>
@@ -429,7 +474,7 @@ function showSystemStatus() {
 // Initialize chart
 function initChart() {
     const chartCanvas = document.getElementById('plantChart');
-    if (!chartCanvas) return;
+    if (!chartCanvas || typeof Chart === 'undefined') return;
     
     // Destroy existing chart
     if (plantChart) {
@@ -437,6 +482,11 @@ function initChart() {
     }
     
     const ctx = chartCanvas.getContext('2d');
+    
+    // ⬅️ FIX: Safety check
+    if (!Array.isArray(peppers)) {
+        peppers = [];
+    }
     
     // Prepare data
     const typeData = {};
