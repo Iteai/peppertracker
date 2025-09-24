@@ -2,7 +2,7 @@
 let peppers = [];
 let dbSync;
 
-// Initialize database with GitHub sync
+// Initialize database with GitHub sync - DEBUG VERSION
 async function initDatabase() {
     try {
         console.log('🔄 Inizializzazione database...');
@@ -12,10 +12,24 @@ async function initDatabase() {
         // Load data from GitHub with local fallback
         const data = await dbSync.loadData();
         
-        // ⬅️ FIX: Ensure peppers is always an array
-        peppers = Array.isArray(data.peppers) ? data.peppers : [];
+        console.log('📊 Raw data loaded from GitHub:', data);
+        
+        // ⬅️ FIX: Handle different data structures
+        let loadedPeppers = [];
+        
+        if (data.peppers) {
+            loadedPeppers = Array.isArray(data.peppers) ? data.peppers : [];
+        } else if (Array.isArray(data)) {
+            // Direct array format
+            loadedPeppers = data;
+        } else {
+            loadedPeppers = [];
+        }
+        
+        peppers = loadedPeppers;
         
         console.log('✅ Database inizializzato con GitHub:', peppers.length, 'peperoncini');
+        console.log('📋 Loaded peppers:', peppers);
         
         // Update displays - with safety checks
         safeRenderTable();
@@ -34,7 +48,14 @@ async function initDatabase() {
         // ⬅️ FIX: Robust fallback
         try {
             const localData = dbSync?.loadFromLocal() || {};
-            peppers = Array.isArray(localData.peppers) ? localData.peppers : [];
+            console.log('📊 Local fallback data:', localData);
+            
+            let fallbackPeppers = [];
+            if (localData.peppers) {
+                fallbackPeppers = Array.isArray(localData.peppers) ? localData.peppers : [];
+            }
+            
+            peppers = fallbackPeppers;
         } catch (localError) {
             console.error('❌ Errore anche nel caricamento locale:', localError);
             peppers = []; // Ultimate fallback
@@ -46,6 +67,7 @@ async function initDatabase() {
         return { peppers: peppers };
     }
 }
+
 
 // Test GitHub connection
 async function testConnection() {
@@ -298,20 +320,27 @@ async function deletePepper(id) {
     }
 }
 
-// Form submission
+// Form submission - FIXED VERSION
 async function handleFormSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
     const editId = e.target.dataset.editId;
     
+    // ⬅️ FIX: Safe form data extraction with null checks
+    const pepperName = formData.get('pepperName');
+    const pepperType = formData.get('pepperType');
+    const pepperOrigin = formData.get('pepperOrigin');
+    const pepperScoville = formData.get('pepperScoville');
+    const pepperDescription = formData.get('pepperDescription');
+    
     const pepperData = {
         id: editId ? parseInt(editId) : Date.now(),
-        name: formData.get('pepperName').trim(),
-        type: formData.get('pepperType').trim(),
-        origin: formData.get('pepperOrigin').trim(),
-        scoville: formData.get('pepperScoville') ? parseInt(formData.get('pepperScoville')) : null,
-        description: formData.get('pepperDescription').trim(),
+        name: pepperName ? pepperName.trim() : '',
+        type: pepperType ? pepperType.trim() : '',
+        origin: pepperOrigin ? pepperOrigin.trim() : '',
+        scoville: pepperScoville && pepperScoville.trim() ? parseInt(pepperScoville.trim()) : null,
+        description: pepperDescription ? pepperDescription.trim() : '',
         dateAdded: editId ? 
             peppers.find(p => p.id == editId)?.dateAdded || new Date().toISOString() : 
             new Date().toISOString(),
@@ -354,6 +383,7 @@ async function handleFormSubmit(e) {
         console.error('Save error:', error);
     }
 }
+
 
 // Update statistics
 function updateStats() {

@@ -6,9 +6,9 @@ class GitHubSync {
     constructor() {
         // CONFIGURAZIONE - AGGIORNA QUESTI VALORI!
         this.owner = 'Iteai'; // ⬅️ SOSTITUISCI con il tuo username GitHub
-        this.repo = 'peppertracker';         // ⬅️ Nome del tuo repository
-        this.branch = 'main';                 // ⬅️ Branch (main o master)
-        this.token = null;                    // ⬅️ Optional: Personal Access Token per repo privati
+        this.repo = 'peppertracker'; // ⬅️ Nome del tuo repository
+        this.branch = 'main'; // ⬅️ Branch (main o master)
+        this.token = null; // ⬅️ Optional: Personal Access Token per repo privati
         
         this.baseUrl = `https://api.github.com/repos/${this.owner}/${this.repo}/contents`;
         this.dataFiles = {
@@ -51,9 +51,12 @@ class GitHubSync {
             const body = {
                 message: `Update ${filename} - ${new Date().toISOString()}`,
                 content: content,
-                branch: this.branch,
-                ...(sha && { sha })
+                branch: this.branch
             };
+            
+            if (sha) {
+                body.sha = sha;
+            }
             
             const response = await fetch(url, {
                 method: 'PUT',
@@ -76,7 +79,7 @@ class GitHubSync {
     }
     
     /**
-     * Load single file from GitHub
+     * Load single file from GitHub - ROBUST VERSION
      */
     async loadFileFromGitHub(filename) {
         try {
@@ -94,8 +97,30 @@ class GitHubSync {
             }
             
             const fileData = await response.json();
-            const content = decodeURIComponent(escape(atob(fileData.content)));
-            return JSON.parse(content);
+            let content = decodeURIComponent(escape(atob(fileData.content)));
+            
+            // Handle empty files and whitespace
+            content = content.trim();
+            if (!content || content === '') {
+                console.log(`📄 Empty file on GitHub: ${filename}`);
+                return null;
+            }
+            
+            try {
+                const parsedData = JSON.parse(content);
+                
+                // Handle peppers.json special structure
+                if (filename === 'data/peppers.json' && parsedData.peppers) {
+                    console.log('🔄 Converting peppers.json structure');
+                    return parsedData.peppers; // Return just the array
+                }
+                
+                return parsedData;
+            } catch (parseError) {
+                console.error(`❌ JSON parse error for ${filename}:`, parseError);
+                console.log('Raw content:', content.substring(0, 200) + '...');
+                return null;
+            }
             
         } catch (error) {
             console.error(`❌ GitHub load error for ${filename}:`, error);
@@ -243,4 +268,9 @@ class DatabaseSync extends GitHubSync {
         super();
         console.log('🔄 DatabaseSync initialized with GitHub backend');
     }
+}
+
+// Export for use in other files
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { GitHubSync, DatabaseSync };
 }
