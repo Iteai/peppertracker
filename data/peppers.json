@@ -1,5 +1,4 @@
-{
-  "peppers": [
+[
     {
       "id": 4,
       "name": "Arlecchino",
@@ -52,6 +51,4 @@
       "fertilizers": [],
       "fertilizerAmount": 0
     }
-  ],
-  "lastUpdate": "2025-09-23T15:28:20.935Z"
-}
+]
