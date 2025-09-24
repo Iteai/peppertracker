@@ -267,7 +267,7 @@ function updateStats() {
     }
 }
 
-// Initialize chart
+// Initialize chart - STILE ORIGINALE
 function initChart() {
     const chartCanvas = document.getElementById('plantChart');
     if (!chartCanvas || typeof Chart === 'undefined') return;
@@ -279,25 +279,37 @@ function initChart() {
     
     const ctx = chartCanvas.getContext('2d');
     
-    // Stage distribution
-    const stageData = {};
+    if (!Array.isArray(peppers) || peppers.length === 0) {
+        return;
+    }
+    
+    // ⬅️ RIPRISTINO: Grafico crescita nel tempo (come l'originale)
+    const monthlyData = {};
     peppers.forEach(pepper => {
-        const stage = pepper.stage || 'Non specificato';
-        stageData[stage] = (stageData[stage] || 0) + 1;
+        const date = new Date(pepper.dateAdded);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
     });
     
+    const labels = Object.keys(monthlyData).sort();
+    const data = labels.map(label => monthlyData[label]);
+    
     plantChart = new Chart(ctx, {
-        type: 'bar',
+        type: 'line', // ⬅️ COME L'ORIGINALE
         data: {
-            labels: Object.keys(stageData),
+            labels: labels,
             datasets: [{
-                label: 'Numero Piante',
-                data: Object.values(stageData),
-                backgroundColor: [
-                    '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', 
-                    '#ffeaa7', '#dda0dd', '#98d8c8'
-                ],
-                borderWidth: 1
+                label: 'Peperoncini Aggiunti',
+                data: data,
+                borderColor: '#ff6b6b',
+                backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#ff6b6b',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4
             }]
         },
         options: {
@@ -305,24 +317,44 @@ function initChart() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    labels: {
+                        color: '#e0e0e0',
+                        font: {
+                            size: 12
+                        }
+                    }
                 }
             },
             scales: {
                 x: {
                     ticks: {
-                        color: '#e0e0e0'
+                        color: '#e0e0e0',
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: '#444',
+                        borderColor: '#666'
                     }
                 },
                 y: {
                     ticks: {
-                        color: '#e0e0e0'
+                        color: '#e0e0e0',
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: '#444',
+                        borderColor: '#666'
                     }
                 }
             }
         }
     });
 }
+
 
 // Modal functions
 function openModal() {
