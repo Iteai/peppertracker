@@ -1,113 +1,149 @@
-// Database management with GitHub sync
-let peppers = [];
+// Database management - VERSIONE CORRETTA CON SYNC
+let databasePeppers = [];
 let dbSync;
 
-// Initialize database with GitHub sync
+// Initialize database
 async function initDatabase() {
     try {
         console.log('🌶️ Inizializzazione database peperoncini...');
-        
-        dbSync = new GitHubSync();
-        
-        // Load data with GitHub priority
+
+        dbSync = new DatabaseSync();
+
+        // Load data from localStorage/cloud
         const data = await dbSync.loadData();
-        peppers = data.peppers || [];
-        
-        console.log('✅ Database inizializzato con GitHub sync:', peppers.length, 'peppers');
-        
+        databasePeppers = data.databasePeppers || [];
+
+        console.log('✅ Database inizializzato:', databasePeppers.length, 'varietà');
+
     } catch (error) {
         console.error('❌ Errore inizializzazione database:', error);
-        // Fallback to local data
         const localData = dbSync?.loadFromLocal() || {};
-        peppers = localData.peppers || [];
+        databasePeppers = localData.databasePeppers || [];
     }
 }
 
-// Save peppers to GitHub
-async function savePeppers() {
+// Save database peppers
+async function saveDatabasePeppers() {
     try {
         const currentData = dbSync.loadFromLocal();
         await dbSync.saveData({
             ...currentData,
-            peppers: peppers,
+            databasePeppers: databasePeppers,
             lastUpdate: new Date().toISOString()
         });
-        
-        console.log('✅ Peppers saved to GitHub');
-        
+
+        console.log('✅ Database salvato');
+
     } catch (error) {
-        console.error('❌ Error saving peppers:', error);
+        console.error('❌ Error saving database:', error);
         throw error;
     }
 }
 
-// Add pepper function
-async function addPepper() {
-    const name = document.getElementById('pepperName').value.trim();
-    const type = document.getElementById('pepperType').value;
-    const origin = document.getElementById('pepperOrigin').value.trim();
-    const scoville = document.getElementById('pepperScoville').value;
-    const description = document.getElementById('pepperDescription').value.trim();
-    
+// Add pepper to database - VERSIONE CORRETTA
+async function addDatabasePepper() {
+    const name = document.getElementById('databasePepperName').value.trim();
+    const species = document.getElementById('databasePepperSpecies').value;
+    const isHybrid = document.getElementById('isHybrid').checked;
+    const motherPlant = document.getElementById('motherPlant').value;
+    const fatherPlant = document.getElementById('fatherPlant').value;
+
     if (!name) {
         alert('⚠️ Nome del peperoncino richiesto!');
         return;
     }
-    
+
+    if (!species) {
+        alert('⚠️ Specie richiesta!');
+        return;
+    }
+
+    // Trova nomi genitori se ibrido
+    let motherPlantName = null;
+    let fatherPlantName = null;
+
+    if (isHybrid) {
+        const mother = databasePeppers.find(p => p.id == motherPlant);
+        const father = databasePeppers.find(p => p.id == fatherPlant);
+        motherPlantName = mother ? mother.name : null;
+        fatherPlantName = father ? father.name : null;
+    }
+
     const pepper = {
         id: Date.now(),
         name: name,
-        type: type,
-        origin: origin,
-        scoville: scoville ? parseInt(scoville) : null,
-        description: description,
-        dateAdded: new Date().toISOString(),
-        varieties: [],
-        crossings: []
+        species: species,
+        isHybrid: isHybrid,
+        motherPlant: isHybrid ? motherPlant : null,
+        fatherPlant: isHybrid ? fatherPlant : null,
+        motherPlantName: motherPlantName,
+        fatherPlantName: fatherPlantName,
+        dateAdded: new Date().toISOString()
     };
-    
-    peppers.push(pepper);
-    
+
+    databasePeppers.push(pepper);
+
     try {
-        await savePeppers();
-        
-        // Reset form
-        document.getElementById('pepperForm').reset();
-        
+        await saveDatabasePeppers();
+
+        // Reset form & close modal
+        document.getElementById('databaseForm').reset();
+        closeDatabaseModal();
+
         // Update display
-        displayPeppers();
-        updateStats();
-        
-        console.log('✅ Pepper added:', pepper.name);
-        
+        displayDatabasePeppers();
+
+        console.log('✅ Varietà aggiunta:', pepper.name);
+
     } catch (error) {
-        // Remove from array if save failed
-        peppers.pop();
+        databasePeppers.pop();
         alert('❌ Errore durante il salvataggio. Riprova.');
     }
 }
 
-// Display peppers
-function displayPeppers() {
-    const tbody = document.getElementById('peppersTableBody');
+// Display database peppers in table
+function displayDatabasePeppers() {
+    const tbody = document.getElementById('databaseTableBody');
     if (!tbody) return;
-    
+
     tbody.innerHTML = '';
-    
-    const sortedPeppers = [...peppers].sort((a, b) => a.name.localeCompare(b.name));
-    
-    sortedPeppers.forEach(pepper => {
+
+    if (databasePeppers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; color: #888; padding: 40px;">
+                    <i class="fas fa-database" style="font-size: 32px; margin-bottom: 10px; display: block;"></i>
+                    Nessuna varietà nel database. Aggiungi la prima!
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    // Apply current filters
+    let filteredPeppers = applyCurrentFilters();
+
+    filteredPeppers.forEach(pepper => {
         const row = document.createElement('tr');
+
+        const typeLabel = pepper.isHybrid ?
+            '<span class="type-hybrid">Hybrid</span>' :
+            '<span class="type-normal">Pure</span>';
+
+        const formattedDate = new Date(pepper.dateAdded).toLocaleDateString('it-IT');
+
         row.innerHTML = `
             <td class="pepper-name">${pepper.name}</td>
-            <td class="pepper-type">${pepper.type || '-'}</td>
-            <td class="pepper-origin">${pepper.origin || '-'}</td>
-            <td class="pepper-scoville">${pepper.scoville ? pepper.scoville.toLocaleString() + ' SHU' : '-'}</td>
+            <td class="pepper-species">${pepper.species || '-'}</td>
+            <td class="pepper-type">${typeLabel}</td>
+            <td class="pepper-mother">${pepper.motherPlantName || '-'}</td>
+            <td class="pepper-father">${pepper.fatherPlantName || '-'}</td>
+            <td class="pepper-date">${formattedDate}</td>
             <td class="pepper-actions">
-                <button onclick="editPepper(${pepper.id})" class="btn-icon" title="Modifica">
+                <button onclick="editDatabasePepper(${pepper.id})" class="btn-icon" title="Modifica">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="deletePepper(${pepper.id})" class="btn-icon btn-danger" title="Elimina">
+                <button onclick="deleteDatabasePepper(${pepper.id})" class="btn-icon btn-danger" title="Elimina">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -116,137 +152,135 @@ function displayPeppers() {
     });
 }
 
-// Edit pepper
-async function editPepper(id) {
-    const pepper = peppers.find(p => p.id === id);
+// Apply current filters
+function applyCurrentFilters() {
+    const searchTerm = document.getElementById('databaseSearchInput')?.value?.toLowerCase() || '';
+    const typeFilter = document.getElementById('typeFilter')?.value || 'all';
+    const sortBy = document.getElementById('sortBy')?.value || 'date-desc';
+
+    let filteredPeppers = [...databasePeppers];
+
+    // Search filter
+    if (searchTerm) {
+        filteredPeppers = filteredPeppers.filter(pepper =>
+            pepper.name.toLowerCase().includes(searchTerm) ||
+            pepper.species?.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    // Type filter
+    if (typeFilter === 'hybrid') {
+        filteredPeppers = filteredPeppers.filter(pepper => pepper.isHybrid);
+    } else if (typeFilter === 'nonhybrid') {
+        filteredPeppers = filteredPeppers.filter(pepper => !pepper.isHybrid);
+    }
+
+    // Sort
+    switch (sortBy) {
+        case 'date-desc':
+            filteredPeppers.sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+            break;
+        case 'date-asc':
+            filteredPeppers.sort((a, b) => new Date(a.dateAdded) - new Date(b.dateAdded));
+            break;
+        case 'name-asc':
+            filteredPeppers.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'name-desc':
+            filteredPeppers.sort((a, b) => b.name.localeCompare(a.name));
+            break;
+        case 'species-asc':
+            filteredPeppers.sort((a, b) => (a.species || '').localeCompare(b.species || ''));
+            break;
+    }
+
+    return filteredPeppers;
+}
+
+// Filter change handler
+function onFilterChange() {
+    displayDatabasePeppers();
+}
+
+// Edit database pepper
+async function editDatabasePepper(id) {
+    const pepper = databasePeppers.find(p => p.id === id);
     if (!pepper) return;
-    
+
     const name = prompt('Nome:', pepper.name);
     if (name === null) return;
-    
-    const type = prompt('Tipo:', pepper.type);
-    if (type === null) return;
-    
-    const origin = prompt('Origine:', pepper.origin);
-    if (origin === null) return;
-    
-    const scoville = prompt('Scoville:', pepper.scoville || '');
-    const description = prompt('Descrizione:', pepper.description);
-    
+
     pepper.name = name.trim() || pepper.name;
-    pepper.type = type.trim() || pepper.type;
-    pepper.origin = origin.trim() || pepper.origin;
-    pepper.scoville = scoville ? parseInt(scoville) : null;
-    pepper.description = description?.trim() || pepper.description;
     pepper.lastModified = new Date().toISOString();
-    
+
     try {
-        await savePeppers();
-        displayPeppers();
-        updateStats();
+        await saveDatabasePeppers();
+        displayDatabasePeppers();
+        populateParentSelectors();
     } catch (error) {
         alert('❌ Errore durante l\'aggiornamento. Riprova.');
     }
 }
 
-// Delete pepper
-async function deletePepper(id) {
-    if (!confirm('🗑️ Sei sicuro di voler eliminare questo peperoncino?')) {
+// Delete database pepper
+async function deleteDatabasePepper(id) {
+    if (!confirm('🗑️ Sei sicuro di voler eliminare questa varietà?')) {
         return;
     }
-    
-    const originalPeppers = [...peppers];
-    peppers = peppers.filter(p => p.id !== id);
-    
+
+    const originalPeppers = [...databasePeppers];
+    databasePeppers = databasePeppers.filter(p => p.id !== id);
+
     try {
-        await savePeppers();
-        displayPeppers();
-        updateStats();
+        await saveDatabasePeppers();
+        displayDatabasePeppers();
+        populateParentSelectors();
     } catch (error) {
-        peppers = originalPeppers;
+        databasePeppers = originalPeppers;
         alert('❌ Errore durante l\'eliminazione. Riprova.');
     }
 }
 
-// Update statistics
-function updateStats() {
-    const totalCount = document.getElementById('totalPeppers');
-    const typesCount = document.getElementById('uniqueTypes');
-    const originsCount = document.getElementById('uniqueOrigins');
-    const averageScoville = document.getElementById('averageScoville');
-    
-    if (totalCount) totalCount.textContent = peppers.length;
-    
-    if (typesCount) {
-        const types = new Set(peppers.filter(p => p.type).map(p => p.type));
-        typesCount.textContent = types.size;
-    }
-    
-    if (originsCount) {
-        const origins = new Set(peppers.filter(p => p.origin).map(p => p.origin));
-        originsCount.textContent = origins.size;
-    }
-    
-    if (averageScoville) {
-        const peppersWithScoville = peppers.filter(p => p.scoville);
-        if (peppersWithScoville.length > 0) {
-            const avg = peppersWithScoville.reduce((sum, p) => sum + p.scoville, 0) / peppersWithScoville.length;
-            averageScoville.textContent = Math.round(avg).toLocaleString() + ' SHU';
-        } else {
-            averageScoville.textContent = '-';
-        }
-    }
-}
+// Populate parent selectors for hybrid form
+function populateParentSelectors() {
+    const motherSelect = document.getElementById('motherPlant');
+    const fatherSelect = document.getElementById('fatherPlant');
 
-// Filter peppers
-function filterPeppers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const typeFilter = document.getElementById('typeFilter').value;
-    
-    let filteredPeppers = peppers;
-    
-    if (searchTerm) {
-        filteredPeppers = filteredPeppers.filter(pepper => 
-            pepper.name.toLowerCase().includes(searchTerm) ||
-            pepper.origin?.toLowerCase().includes(searchTerm) ||
-            pepper.description?.toLowerCase().includes(searchTerm)
-        );
-    }
-    
-    if (typeFilter && typeFilter !== 'all') {
-        filteredPeppers = filteredPeppers.filter(pepper => pepper.type === typeFilter);
-    }
-    
-    displayFilteredPeppers(filteredPeppers);
-}
+    if (!motherSelect || !fatherSelect) return;
 
-// Display filtered peppers
-function displayFilteredPeppers(filteredPeppers) {
-    const tbody = document.getElementById('peppersTableBody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = '';
-    
-    const sortedPeppers = [...filteredPeppers].sort((a, b) => a.name.localeCompare(b.name));
-    
-    sortedPeppers.forEach(pepper => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="pepper-name">${pepper.name}</td>
-            <td class="pepper-type">${pepper.type || '-'}</td>
-            <td class="pepper-origin">${pepper.origin || '-'}</td>
-            <td class="pepper-scoville">${pepper.scoville ? pepper.scoville.toLocaleString() + ' SHU' : '-'}</td>
-            <td class="pepper-actions">
-                <button onclick="editPepper(${pepper.id})" class="btn-icon" title="Modifica">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button onclick="deletePepper(${pepper.id})" class="btn-icon btn-danger" title="Elimina">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
+    // Clear and repopulate
+    motherSelect.innerHTML = '<option value="">Seleziona pianta madre</option>';
+    fatherSelect.innerHTML = '<option value="">Seleziona pianta padre</option>';
+
+    databasePeppers.forEach(pepper => {
+        const option1 = document.createElement('option');
+        option1.value = pepper.id;
+        option1.textContent = `${pepper.name} (${pepper.species})`;
+        motherSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = pepper.id;
+        option2.textContent = `${pepper.name} (${pepper.species})`;
+        fatherSelect.appendChild(option2);
     });
+}
+
+// Modal functions
+function openDatabaseModal() {
+    const modal = document.getElementById('databaseModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        populateParentSelectors();
+    }
+}
+
+function closeDatabaseModal() {
+    const modal = document.getElementById('databaseModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 }
 
 // Initialize sidebar
@@ -256,10 +290,10 @@ function initSidebar() {
     const overlay = document.getElementById('overlay');
     const closeBtn = document.getElementById('closeBtn');
     const container = document.querySelector('.container');
-    
+
     if (!hamburgerMenu || !sidebar) return;
-    
-    hamburgerMenu.addEventListener('click', function() {
+
+    hamburgerMenu.addEventListener('click', function () {
         sidebar.classList.add('active');
         overlay.classList.add('active');
         container.classList.add('shifted');
@@ -277,35 +311,70 @@ function initSidebar() {
     }
 }
 
+// Initialize hybrid checkbox toggle
+function initHybridToggle() {
+    const isHybridCheckbox = document.getElementById('isHybrid');
+    const hybridFields = document.getElementById('hybridFields');
+
+    if (isHybridCheckbox && hybridFields) {
+        isHybridCheckbox.addEventListener('change', function () {
+            hybridFields.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+}
+
 // Initialize when page loads
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     try {
+        console.log('🌶️ Avvio Database Page...');
+
         initSidebar();
+        initHybridToggle();
         await initDatabase();
-        displayPeppers();
-        updateStats();
-        
+        displayDatabasePeppers();
+        populateParentSelectors();
+
         // Setup form submission
-        const form = document.getElementById('pepperForm');
+        const form = document.getElementById('databaseForm');
         if (form) {
-            form.addEventListener('submit', function(e) {
+            form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                addPepper();
+                addDatabasePepper();
             });
         }
-        
-        // Setup search
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) {
-            searchInput.addEventListener('input', filterPeppers);
+
+        // Add pepper button
+        const addBtn = document.getElementById('addDatabasePepperBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', openDatabaseModal);
         }
-        
-        const typeFilter = document.getElementById('typeFilter');
-        if (typeFilter) {
-            typeFilter.addEventListener('change', filterPeppers);
-        }
-        
+
+        // Close modal buttons
+        document.getElementById('closeDatabaseModal')?.addEventListener('click', closeDatabaseModal);
+        document.getElementById('cancelDatabaseBtn')?.addEventListener('click', closeDatabaseModal);
+
+        // Filter listeners
+        document.getElementById('databaseSearchInput')?.addEventListener('input', onFilterChange);
+        document.getElementById('typeFilter')?.addEventListener('change', onFilterChange);
+        document.getElementById('sortBy')?.addEventListener('change', onFilterChange);
+
+        // Click outside modal to close
+        window.addEventListener('click', function (e) {
+            const modal = document.getElementById('databaseModal');
+            if (e.target === modal) {
+                closeDatabaseModal();
+            }
+        });
+
+        console.log('✅ Database page inizializzata');
+
     } catch (error) {
         console.error('❌ Errore inizializzazione pagina database:', error);
     }
 });
+
+// Export functions for global use
+window.editDatabasePepper = editDatabasePepper;
+window.deleteDatabasePepper = deleteDatabasePepper;
+window.openDatabaseModal = openDatabaseModal;
+window.closeDatabaseModal = closeDatabaseModal;
